@@ -41,7 +41,7 @@
             <label class="col-sm-3 control-label">Notify-группы</label>
             <div class="col-sm-9">
                 <textarea class="form-control" name="notifyGroups" rows="4" placeholder="all=1,2,3&#10;kitchen=5,8">[#NOTIFY_GROUPS_TEXT#]</textarea>
-                <p class="help-block">Одна группа на строку: <code>имя=ID_станции,ID_станции</code>. API: <code>/api/module/yadevices?notify=all&amp;command=text&amp;data=Текст</code>.</p>
+                <p class="help-block">Одна группа на строку: <code>имя=ID_станции,ID_станции</code>. API: <code>/api/module/yadevices?notify=all&amp;command=text&amp;data=Текст</code> или <code>callAPI('/api/module/yadevices','GET',array('group'=>'all','command'=>'text','data'=>'Текст'));</code>.</p>
             </div>
         </div>
 

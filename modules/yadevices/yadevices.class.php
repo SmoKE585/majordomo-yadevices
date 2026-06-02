@@ -173,10 +173,11 @@ class yadevices extends module
 		if (!empty($params['getonline'])) {
             $this->onlineStations();
         }
-        if (!empty($params['notify'])) {
+        if (!empty($params['notify']) || !empty($params['group'])) {
             $command = $params['command'] ?? 'text';
             $data = $params['data'] ?? ($params['say'] ?? '');
-            $this->sendNotifyGroup($params['notify'], $command, $data);
+            $groupName = $params['notify'] ?? $params['group'];
+            $this->sendNotifyGroup($groupName, $command, $data);
             return;
         }
 		

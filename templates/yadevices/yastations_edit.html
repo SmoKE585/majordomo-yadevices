@@ -489,6 +489,10 @@ $(function() {
 	<div class="panel-body">
 		Простое сообщение:
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#], 'command'=>'text', 'data'=>'раз-два-три'));</pre>
+		Сообщение на notify-группу колонок (группы задаются в настройках модуля):
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('group'=>'all', 'command'=>'text', 'data'=>'раз-два-три'));</pre>
+		То же самое через старое имя параметра:
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('notify'=>'all', 'command'=>'text', 'data'=>'раз-два-три'));</pre>
 		
 		Возможно добавление <a href="https://yandex.ru/dev/dialogs/alice/doc/ru/speech-effects">эффектов</a>, <a href="https://yandex.ru/dev/dialogs/alice/doc/ru/sounds">звуков</a>, и проговаривание различными <a href="https://yandex.ru/dev/dialogs/alice/doc/ru/voices#actual">голосами</a>:
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#], 'command'=>'text', 'data'=>'&lt;speaker effect="megaphone"&gt;Ехал Грека через реку&lt;speaker effect="-"&gt; видит Грека в реке рак'));</pre>
