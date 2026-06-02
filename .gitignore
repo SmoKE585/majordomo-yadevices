@@ -1,0 +1,10 @@
+.idea/
+
+# MajorDoMo runtime/cache data
+cms/yadevices/
+cms/cached/
+*.log
+
+# QR images are generated at runtime
+modules/yadevices/phpqrcode/cache/*
+!modules/yadevices/phpqrcode/cache/.gitkeep

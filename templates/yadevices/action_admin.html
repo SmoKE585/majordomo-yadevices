@@ -1,0 +1,179 @@
+<style>
+:root {
+    --ya-ink: #162033;
+    --ya-muted: #6b7280;
+    --ya-line: #dbe4ee;
+    --ya-soft: #f5f8fb;
+    --ya-card: #ffffff;
+    --ya-accent: #0f766e;
+    --ya-accent-2: #f59e0b;
+    --ya-danger: #dc2626;
+}
+.ya-admin {
+    color: var(--ya-ink);
+    background:
+        radial-gradient(circle at 10% 0%, rgba(15,118,110,.16), transparent 28%),
+        radial-gradient(circle at 100% 6%, rgba(245,158,11,.18), transparent 24%),
+        linear-gradient(180deg, #f8fafc, #eef4f7);
+    padding: 0 0 26px;
+    border-radius: 14px;
+}
+.ya-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 24px 26px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #111827 0%, #0f766e 58%, #f59e0b 120%);
+    color: #fff;
+    box-shadow: 0 18px 45px rgba(15,23,42,.18);
+}
+.ya-hero:before {
+    content: "";
+    position: absolute;
+    right: -80px;
+    top: -110px;
+    width: 270px;
+    height: 270px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.13);
+}
+.ya-hero-title {font-size: 28px;font-weight: 800;letter-spacing: -.03em;margin: 0 0 4px;}
+.ya-hero-sub {opacity: .86;font-size: 14px;}
+.ya-hero-actions {position: relative;z-index: 1;text-align: right;margin-top: 4px;}
+.ya-hero-actions a {color:#fff;text-decoration:none;margin-left:12px;display:inline-block;padding:7px 0;}
+.ya-hero-actions a:hover {opacity:.8;}
+.ya-state-pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 10px;
+}
+.ya-state-ok {background: rgba(34,197,94,.2);color:#dcfce7;border:1px solid rgba(220,252,231,.5);}
+.ya-state-bad {background: rgba(239,68,68,.2);color:#fee2e2;border:1px solid rgba(254,226,226,.5);}
+.ya-nav-row {margin: 18px -7px 14px;}
+.ya-nav-tile {
+    cursor: pointer;
+    min-height: 76px;
+    border: 1px solid var(--ya-line);
+    border-radius: 13px;
+    background: rgba(255,255,255,.86);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 9px 24px rgba(15,23,42,.06);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.ya-nav-tile:hover {transform: translateY(-2px);box-shadow:0 14px 30px rgba(15,23,42,.1);border-color:#99b7c4;}
+.ya-nav-tile.active {background: #102034;color:#fff;border-color:#102034;}
+.ya-nav-tile img {width:42px;height:42px;background:#fff;border-radius:12px;padding:7px;}
+.ya-nav-title {font-weight:800;line-height:1.2;}
+.ya-nav-hint {font-size:12px;color:var(--ya-muted);}
+.ya-nav-tile.active .ya-nav-hint {color:rgba(255,255,255,.72);}
+.ya-panel-card, .ya-card {
+    border: 1px solid var(--ya-line);
+    border-radius: 14px;
+    background: var(--ya-card);
+    box-shadow: 0 10px 28px rgba(15,23,42,.07);
+}
+.ya-panel-card {padding: 18px;margin-bottom: 16px;}
+.ya-section-title {font-weight:800;font-size:20px;margin:0 0 12px;letter-spacing:-.02em;}
+.ya-table-card {overflow:hidden;border-radius:14px;border:1px solid var(--ya-line);background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06);}
+.ya-table-card .table {margin-bottom:0;}
+.ya-table-card th {background:#f8fafc;color:#475569;border-bottom:1px solid var(--ya-line)!important;font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
+.ya-badge {display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;}
+.ya-badge-ok {background:#dcfce7;color:#166534;}
+.ya-badge-bad {background:#fee2e2;color:#991b1b;}
+.ya-badge-warn {background:#fef3c7;color:#92400e;}
+.ya-badge-info {background:#dbeafe;color:#1e40af;}
+.ya-empty {padding:28px;text-align:center;border:1px dashed #b8c7d3;border-radius:14px;background:#fff;}
+.ya-admin .btn {border-radius:9px;}
+.ya-admin .form-control {border-radius:9px;border-color:#ccd8e2;box-shadow:none;}
+.ya-admin .form-control:focus {border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.12);}
+.ya-admin pre {border-radius:12px;border:1px solid #f3d7df!important;background:#fff7f9!important;}
+@media (max-width: 767px) {
+    .ya-hero {padding:18px;}
+    .ya-hero-actions {text-align:left;margin-top:14px;}
+    .ya-hero-actions a {margin:0 12px 0 0;}
+    .ya-nav-tile {min-height:64px;margin-bottom:10px;}
+}
+</style>
+
+<div class="ya-admin">
+    <div class="ya-hero">
+        <div class="row">
+            <div class="col-md-7">
+                <div class="ya-hero-title">YaDevices</div>
+                <div class="ya-hero-sub">Станции, устройства и сценарии Яндекса в MajorDoMo</div>
+                [#if AUTHORIZED == 1#]
+                    <span class="ya-state-pill ya-state-ok"><i class="glyphicon glyphicon-ok"></i> Авторизация активна</span>
+                [#else#]
+                    <span class="ya-state-pill ya-state-bad"><i class="glyphicon glyphicon-warning-sign"></i> Требуется авторизация</span>
+                [#endif#]
+            </div>
+            <div class="col-md-5 ya-hero-actions">
+                <a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=7359" target="_blank"><i class="glyphicon glyphicon-comment"></i> Обсуждение</a>
+                [#if COOKIE_FILE == 1#]
+                    [#if VIEW_MODE="search_yastations" || VIEW_MODE="" || VIEW_MODE="search_yadevices"#]
+                        <a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>"><i class="glyphicon glyphicon-refresh"></i> Обновить</a>
+                    [#endif#]
+                    <a href="javascript://" onclick="$('#settings_block').slideToggle(160);"><i class="glyphicon glyphicon-cog"></i> Настройки</a>
+                [#endif#]
+                <a href="?view_mode=auth"><i class="glyphicon glyphicon-lock"></i> Авторизация</a>
+                <a href="?view_mode=logout"><i class="glyphicon glyphicon-log-out"></i> Выход</a>
+            </div>
+        </div>
+    </div>
+
+    [#if AUTHORIZED !== 1#]
+        [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
+        <div class="ya-empty" style="margin-top:16px;">
+            <h3 style="margin-top:0;">Авторизация отсутствует</h3>
+            <p class="text-muted">Чтобы получить список станций и устройств, нужно пройти авторизацию Яндекса.</p>
+            <a href="?view_mode=auth" class="btn btn-success"><i class="glyphicon glyphicon-lock"></i> Перейти к авторизации</a>
+        </div>
+        [#endif VIEW_MODE#]
+    [#endif#]
+
+    [#inc settings_page.html#]
+
+    <div class="row ya-nav-row">
+        <div class="col-md-4 col-sm-4 col-xs-12" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='">
+            <div class="ya-nav-tile [#if VIEW_MODE="search_yastations" || VIEW_MODE="edit_yastations" || VIEW_MODE=""#]active[#endif#]">
+                <img src="<#ROOTHTML#>templates/yadevices/img/station.svg">
+                <div>
+                    <div class="ya-nav-title">Станции</div>
+                    <div class="ya-nav-hint">TTS, локальный режим, плеер</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-4 col-xs-12" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'">
+            <div class="ya-nav-tile [#if VIEW_MODE="search_scenarios"#]active[#endif#]">
+                <img src="<#ROOTHTML#>templates/yadevices/img/scenario.svg">
+                <div>
+                    <div class="ya-nav-title">Сценарии</div>
+                    <div class="ya-nav-hint">Cloud TTS и ответы</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-4 col-xs-12" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'">
+            <div class="ya-nav-tile [#if VIEW_MODE="search_yadevices" || VIEW_MODE="edit_yadevices"#]active[#endif#]">
+                <img src="<#ROOTHTML#>templates/yadevices/img/device.svg">
+                <div>
+                    <div class="ya-nav-title">Устройства</div>
+                    <div class="ya-nav-hint">Свойства, связи и управление</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    [#if VIEW_MODE="auth"#][#inc auth.html#][#endif#]
+    [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#][#inc yastations_search_admin.html#][#endif VIEW_MODE#]
+    [#if VIEW_MODE="search_yadevices"#][#inc yadevices_search_admin.html#][#endif VIEW_MODE#]
+    [#if VIEW_MODE="search_scenarios"#][#inc yascenarios_search.html#][#endif VIEW_MODE#]
+    [#if VIEW_MODE="edit_yastations"#][#inc yastations_edit.html#][#endif VIEW_MODE#]
+    [#if VIEW_MODE="edit_yadevices"#][#inc yadevices_edit.html#][#endif VIEW_MODE#]
+    [#if VIEW_MODE="view_yastations"#][#inc yastations_view.html#][#endif VIEW_MODE#]
+</div>

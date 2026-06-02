@@ -1,0 +1,140 @@
+<div class="ya-panel-card">
+<div class="row">
+	<div class="col-md-12">
+		<h2 style="margin-top:0;">[#if VALUE !=''#]<a href="?view_mode=edit_yadevices&id=[#ID#]&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]">[#endif VALUE#]<img src="[#ICON#]" width="72" style="background:#f8fafc;border-radius:16px;padding:8px;margin-right:10px;">[#if VALUE !=''#]</a>[#endif VALUE#][#TITLE#]</h2>
+        <form action="?" method="post" class="form-inline" style="margin-bottom:15px;">
+            <div class="form-group" style="width:70%;max-width:520px;">
+                <label class="sr-only" for="device_title">Название</label>
+                <input id="device_title" name="title" value="[#TITLE#]" type="text" class="form-control" style="width:100%;" placeholder="Название в MajorDoMo">
+                <p class="help-block">Оригинальное имя Яндекса: <b>[#ORIGINAL_TITLE#]</b></p>
+            </div>
+            <button type="submit" class="btn btn-success"><i class="glyphicon glyphicon-pencil"></i> Переименовать</button>
+            <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+            <input type="hidden" name="id" value="<#ID#>">
+            <input type="hidden" name="mode" value="rename">
+        </form>
+	</div>
+	
+	<div class="col-md-12">
+		<form class="form-horizontal">
+			[#if SKILLS_ID != ''#]
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">ID навыка</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#SKILLS_ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Имя навыка</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#SKILLS_NAME#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Описание навыка</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#SKILLS_DESCRIPTION#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Владелец навыка</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#SKILLS_DEVELOPER_NAME#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<hr>
+			[#endif SKILLS_ID#]
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IoT ID / MDM ID</label>
+				<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
+					<input id="station_id" name="station_id" value="[#IOT_ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+				<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
+					<input id="station_id" name="station_id" value="[#if STATION == true#][#yastationID#][#else#][#ID#][#endif STATION#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Тип устройства</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#DEVICE_TYPE#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Добавлено</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="station_id" name="station_id" value="[#UPDATED#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+</div>
+
+[#if PROPERTIES_COUNT>0#]
+<div class="ya-panel-card">
+	<div class="ya-section-title">Умения и связи</div>
+		<div class="alert alert-info text-center">
+			Пока реализовано получение статусов и управление основными умениями устройств.<br>
+			Так же, модуль пока не может выгружать все возможные умения, если вы заметили, что чего - либо не хватает - напишите на форум в <a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=7359&p=126065#p126065" style="color: red;" target="_blank">эту тему</a>
+		</div>
+		<div class="ya-table-card table-responsive">
+			<form class="form">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Умение</th>
+							<th>Значение</th>
+							<th>ПУ</th>
+							<th>Объект</th>
+							<th>Свойство</th>
+							<th>Метод</th>
+							<th>Изменено</th>
+						</tr>
+					</thead>
+					[#begin PROPERTIES#]
+					[#if HIDE==0#]
+					<tr>
+						<td>
+							[#TITLE#]
+							[#if ALLOWPARAMS!=''#]<div style="color: gray;font-size: 1rem;font-style: italic;">Доступно: [#ALLOWPARAMS#]</div>[#endif#]
+							[#if READONLY==1#]<div style="color: red;font-size: 1rem;font-style: italic;">Только чтение</div>[#endif#]
+						</td>
+						<td>[#VALUE#]</td>
+						[#if CAN_LINK="1"#]
+							<td valign="top">
+								[#if SDEVICE_TYPE!=""#]
+								[#module name="devices" action="link" type="<#PROPERTIES.SDEVICE_TYPE#>" prefix="Ya" source_table="yadevices_capabilities" source_table_id="<#PROPERTIES.ID#>" linked_object="<#PROPERTIES.LINKED_OBJECT#>"#]
+								[#else#]
+								&nbsp;
+								[#endif#]
+							</td>
+							<td>
+								<input type="text" name="linked_object[#ID#]" id="linked_object[#ID#]" value="[#LINKED_OBJECT#]">
+							</td>
+							<td>
+								<input type="text" name="linked_property[#ID#]" id="linked_property[#ID#]" value="[#LINKED_PROPERTY#]">
+							</td>
+							<td>
+								<input type="text" name="linked_method[#ID#]" id="linked_method[#ID#]" value="[#LINKED_METHOD#]">
+							</td>
+							[#module name="linkedobject" object_field="linked_object<#PROPERTIES.ID#>" property_field="linked_property<#PROPERTIES.ID#>" method_field="linked_method<#PROPERTIES.ID#>" width="200"#]
+						[#else#]
+							<td colspan="4"></td>
+						[#endif#]
+						<td>[#UPDATED#]</td>
+					</tr>
+					[#endif HIDE#]
+					[#end PROPERTIES#]
+				</table>
+				
+				<div class="text-center" style="padding:14px;">
+					<input type="submit" class="btn btn-default btn-success" value="<#LANG_SUBMIT#>">
+					<a href="?view_mode=search_yadevices" class="btn btn-warning"><#LANG_CANCEL#></a>				
+				</div>
+				<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+				<input type="hidden" name="id" value="<#ID#>">
+				<input type="hidden" name="mode" value="update">
+			</form>
+		</div>
+</div>
+[#endif#]

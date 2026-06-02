@@ -1,0 +1,33 @@
+<div class="ya-panel-card">
+    <div class="ya-section-title">Устройства Яндекса</div>
+    <div class="ya-table-card table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Комната</th>
+                    <th>Дом</th>
+                    <th>IoT ID</th>
+                    <th>Обновлено</th>
+                </tr>
+            </thead>
+            <tbody>
+            [#begin RESULT#]
+                <tr>
+                    <td>
+                        [#if VALUE !=''#]<a href="?view_mode=search_yadevices&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]" class="btn btn-xs btn-default" title="Переключить"><i class="glyphicon glyphicon-off"></i></a>[#endif VALUE#]
+                        <img src="[#ICON#]" width="34" height="34" style="object-fit:contain;background:#f8fafc;border-radius:9px;padding:4px;margin-right:7px;">
+                        <a href="?view_mode=edit_yadevices&id=[#ID#]"><b>[#TITLE#]</b></a>
+                    </td>
+                    <td><span class="ya-badge ya-badge-info">[#DEVICE_TYPE#]</span></td>
+                    <td>[#ROOM#]</td>
+                    <td>[#HOUSE#]</td>
+                    <td class="text-muted" style="font-size:12px;">[#IOT_ID#]</td>
+                    <td>[#UPDATED#]</td>
+                </tr>
+            [#end RESULT#]
+            </tbody>
+        </table>
+    </div>
+</div>

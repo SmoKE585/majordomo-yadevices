@@ -1,0 +1,60 @@
+<div id="settings_block" class="ya-panel-card" style="display:none;">
+    <div class="ya-section-title"><i class="glyphicon glyphicon-cog"></i> Настройки модуля</div>
+    <form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label">Опрос состояния</label>
+            <div class="col-sm-5">
+                <select class="form-control" name="cycleIsOnTime">
+                    <option value="10" [#if RELOAD_TIME==10#]selected[#endif#]>10 секунд</option>
+                    <option value="15" [#if RELOAD_TIME==15#]selected[#endif#]>15 секунд</option>
+                    <option value="30" [#if RELOAD_TIME==30#]selected[#endif#]>30 секунд</option>
+                    <option value="60" [#if RELOAD_TIME==60#]selected[#endif#]>1 минута</option>
+                    <option value="120" [#if RELOAD_TIME==120#]selected[#endif#]>2 минуты</option>
+                    <option value="180" [#if RELOAD_TIME==180#]selected[#endif#]>3 минуты</option>
+                    <option value="300" [#if RELOAD_TIME==300#]selected[#endif#]>5 минут</option>
+                    <option value="600" [#if RELOAD_TIME==600#]selected[#endif#]>10 минут</option>
+                </select>
+                <p class="help-block">Чем ниже интервал, тем выше риск ограничений со стороны Яндекса.</p>
+            </div>
+            <div class="col-sm-4">
+                [#module name="xray" action="service" cycle="yadevices"#]
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label">Мониторинг ошибок</label>
+            <div class="col-sm-9">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="errorMonitor" [#if ERRORMONITOR==1#]checked[#endif#] onclick="if($(this).prop('checked')) { $('#errorMonitorType_block').slideDown(120) } else { $('#errorMonitorType_block').slideUp(120) }"> Включить
+                </label>
+                <div id="errorMonitorType_block" style="margin-top:10px;[#if ERRORMONITOR!=1#]display:none;[#endif#]">
+                    <select class="form-control" name="errorMonitorType" onchange="errorHelpText($(this).val());" style="max-width:420px;">
+                        <option value="1" [#if ERRORMONITORTYPE==1#]selected[#endif#]>Модуль “Ошибки системы”</option>
+                        <option value="2" [#if ERRORMONITORTYPE==2#]selected[#endif#]>DebMes</option>
+                    </select>
+                    <p class="help-block" id="errorMonitorType_help"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-right">
+            <button type="submit" class="btn btn-success"><i class="glyphicon glyphicon-floppy-disk"></i> Сохранить</button>
+        </div>
+        <input type="hidden" name="view_mode" value="update_settings_cycle">
+    </form>
+</div>
+
+<script>
+$(function() {
+    var errorDefault = '[#ERRORMONITORTYPE#]';
+    if(errorDefault === '0') errorDefault = '1';
+    errorHelpText(errorDefault);
+});
+function errorHelpText(id) {
+    if(id === '1') {
+        $('#errorMonitorType_help').html('Критические ошибки будут попадать в системный мониторинг. DebMes не используется.');
+    } else {
+        $('#errorMonitorType_help').html('Критические ошибки не создаются, запись идет только в DebMes.');
+    }
+}
+</script>

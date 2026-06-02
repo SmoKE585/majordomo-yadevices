@@ -1,0 +1,25 @@
+<div class="ya-card ya-card-soft">
+    <h3>Авторизация по x-token</h3>
+    <p class="text-muted">
+        Это тот же тип токена, который сохраняет HASS после QR/cookie авторизации. Пароль Яндекса здесь не нужен.
+    </p>
+    <div class="alert alert-info">
+        <b>Где взять x-token:</b><br>
+        1. Обычно вручную брать не нужно: пройдите QR-код или загрузите cookies, модуль сам получит и сохранит x-token.<br>
+        2. Если переносите авторизацию из HASS, токен хранится в данных config entry интеграции Yandex.Station как <code>x_token</code>.<br>
+        3. В старых установках HASS токен мог лежать в файле <code>.yandex_station.json</code>: <code>main_token.access_token</code>.<br>
+        4. Не вставляйте сюда device token станции или OAuth token Яндекс.Музыки - нужен именно длинный account x-token.
+    </div>
+    <form action="?" method="post" class="ya-form-loading">
+        <div class="form-group">
+            <label>x-token</label>
+            <textarea name="x_token" class="form-control" rows="3" placeholder="Вставьте x-token"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">
+            <i class="glyphicon glyphicon-ok"></i> Проверить и сохранить
+        </button>
+        <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
+        <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+        <input type="hidden" name="type" value="<#TYPE#>">
+    </form>
+</div>

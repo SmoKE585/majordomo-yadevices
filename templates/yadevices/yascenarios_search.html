@@ -1,0 +1,56 @@
+[#if RESULT_TIMER#]
+<div class="ya-panel-card">
+    <div class="ya-section-title">Одноразовые сценарии</div>
+    <div class="row">
+        [#begin RESULT_TIMER#]
+        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+            <div class="ya-card" style="padding:14px;margin-bottom:10px;text-align:center;">
+                <img src="http://avatars.mds.yandex.net/get-iot/icons-devices-[#DEVICE_TYPE#].svg/orig" style="height:58px;">
+                <h4>[#NAME#]</h4>
+                <span class="ya-badge ya-badge-warn">Запуск [#SCHEDULED_TIME_HUMAN#]</span>
+            </div>
+        </div>
+        [#end RESULT_TIMER#]
+    </div>
+</div>
+[#endif#]
+
+<div class="ya-panel-card">
+    <div class="ya-section-title">Сценарии</div>
+    <div class="ya-table-card table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>ID</th>
+                    <th>Статус</th>
+                    <th>Устройства</th>
+                    <th class="text-center">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+            [#begin RESULT#]
+                [#if CLOUDSCENARIO == 1#]
+                <tr>
+                    <td colspan="5" class="warning text-center">
+                        <i class="glyphicon glyphicon-cloud"></i> Системный сценарий cloud TTS. Не удаляйте, если облачная отправка используется.
+                    </td>
+                </tr>
+                [#endif CLOUDSCENARIO#]
+                <tr>
+                    <td>
+                        <img src="[#ICON_URL#]" style="width:22px;height:22px;vertical-align:middle;border-radius:50%;margin-right:7px;">
+                        <b>[#NAME#]</b>
+                    </td>
+                    <td class="text-muted" style="font-size:12px;">[#ID#]</td>
+                    <td><span class="ya-badge ya-badge-info">[#IS_ACTIVE#]</span></td>
+                    <td>[#ALLOWDEVICES#]</td>
+                    <td class="text-center">
+                        <a href="?mode=delScenario&view_mode=search_scenarios&id=[#ID#]" onclick="return confirm('Удалить сценарий?')" class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-trash"></i> Удалить</a>
+                    </td>
+                </tr>
+            [#end RESULT#]
+            </tbody>
+        </table>
+    </div>
+</div>
