@@ -28,6 +28,7 @@
 function startQRStatusCheck() {
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     const auth = document.querySelector('input[name="auth"]').value;
+    const adminRedirectUrl = '/admin.php?pd=pz_&md=panel&inst=&action=yadevices';
 
     const pollInterval = 1000; // Интервал 1 секунда
 
@@ -54,7 +55,7 @@ function startQRStatusCheck() {
 	
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+						adminRedirectUrl + '&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
 	
 				} else if (response.state === 'auth_error') {
 					// Ошибка авторизации — отправляем форму с state=error
@@ -63,7 +64,7 @@ function startQRStatusCheck() {
 		
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'?view_mode=auth&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
+						adminRedirectUrl + '&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
 				} else {
 					// Если авторизация ещё не завершена, планируем следующий запрос
 					setTimeout(checkStatus, pollInterval);

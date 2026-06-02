@@ -30,6 +30,7 @@
 function startBrowserAuthStatusCheck() {
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     const auth = document.querySelector('input[name="auth"]').value;
+    const adminRedirectUrl = '/admin.php?pd=pz_&md=panel&inst=&action=yadevices';
     const pollInterval = 1000;
 
     function checkStatus() {
@@ -48,12 +49,12 @@ function startBrowserAuthStatusCheck() {
                     document.getElementById('status-message').innerHTML =
                         '<span style="color: green;">Авторизация успешно завершена.</span>';
                     window.location.href =
-                        '?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+                        adminRedirectUrl + '&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
                 } else if (response.state === 'auth_error') {
                     document.getElementById('status-message').innerHTML =
                         '<span style="color: red;">Ошибка авторизации.</span>';
                     window.location.href =
-                        '?view_mode=auth&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
+                        adminRedirectUrl + '&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
                 } else {
                     setTimeout(checkStatus, pollInterval);
                 }
