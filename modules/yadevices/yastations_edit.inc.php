@@ -36,6 +36,55 @@ if ($this->mode == 'send_text') {
     $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']);
 }
 
+if ($this->mode == 'ask_alice') {
+    $out['ASK_TEXT'] = gr('ask_text');
+    $answer = $this->askStation($rec, $out['ASK_TEXT']);
+    if (is_array($answer)) {
+        $out['ASK_ANSWER'] = htmlspecialchars($answer['text'] ?? json_encode($answer, JSON_UNESCAPED_UNICODE));
+        $out['OK_MSG'] = 'Ответ получен от локальной Алисы.';
+    } else {
+        $out['ERR'] = 1;
+        $out['ERR_MSG'] = 'Не удалось получить ответ. Conversation работает только через локальный режим Glagol.';
+    }
+}
+
+if ($this->mode == 'update_station_settings') {
+    $settings = array(
+        'dnd' => gr('dnd', 'int'),
+        'beta' => gr('beta', 'int'),
+        'locale' => gr('locale'),
+        'led_brightness' => gr('led_brightness'),
+        'visualization' => gr('visualization'),
+    );
+    if ($this->updateStationQuasarSettings($rec, $settings)) {
+        $out['OK'] = 1;
+        $out['OK_MSG'] = 'Настройки станции обновлены.';
+    } else {
+        $out['ERR'] = 1;
+        $out['ERR_MSG'] = 'Не удалось обновить настройки станции. Возможно, устройство не поддерживает часть параметров.';
+    }
+}
+
+if ($this->mode == 'create_alarm') {
+    if ($this->createStationAlarm($rec, gr('alarm_date'), gr('alarm_time'))) {
+        $out['OK'] = 1;
+        $out['OK_MSG'] = 'Будильник создан.';
+    } else {
+        $out['ERR'] = 1;
+        $out['ERR_MSG'] = 'Не удалось создать будильник.';
+    }
+}
+
+if ($this->mode == 'cancel_alarm') {
+    if ($this->cancelStationAlarm($rec, gr('alarm_id'))) {
+        $out['OK'] = 1;
+        $out['OK_MSG'] = 'Будильник удален.';
+    } else {
+        $out['ERR'] = 1;
+        $out['ERR_MSG'] = 'Не удалось удалить будильник.';
+    }
+}
+
 if ($this->mode == 'detect_ip') {
     $detectedIp = $this->detectStationIp($rec);
     if ($detectedIp) {
@@ -105,6 +154,32 @@ if (is_array($rec)) {
     $rec['CLOUD_AVAILABLE'] = (!empty($this->config['AUTHORIZED']) && !empty($rec['IOT_ID'])) ? 1 : 0;
     $rec['CLOUD_SCENARIO_READY'] = !empty($rec['TTS_SCENARIO']) ? 1 : 0;
     $rec['IP_TEST_AVAILABLE'] = !empty($rec['IP']) ? 1 : 0;
+
+    $stationConfig = $this->getStationQuasarConfig($rec);
+    if ($stationConfig) {
+        $config = $stationConfig['config'];
+        $out['STATION_DND'] = !empty($config['dndMode']['enabled']) ? 1 : 0;
+        $out['STATION_DND_SUPPORTED'] = isset($config['dndMode']) ? 1 : 0;
+        $out['STATION_BETA'] = !empty($config['beta']) ? 1 : 0;
+        $out['STATION_LOCALE'] = htmlspecialchars($config['locale'] ?? '');
+        $out['STATION_LED_BRIGHTNESS'] = htmlspecialchars(isset($config['led']['brightness']['value']) ? (string)$config['led']['brightness']['value'] : '');
+        $out['STATION_LED_AUTO'] = !empty($config['led']['brightness']['auto']) ? 1 : 0;
+        $out['STATION_VISUALIZATION'] = !empty($config['led']['music_equalizer_visualization']['auto']) ? 'auto' : 'clock';
+    } else {
+        $out['STATION_CONFIG_UNAVAILABLE'] = 1;
+    }
+
+    $alarms = $this->getStationAlarms($rec);
+    foreach ($alarms as $key => $alarm) {
+        $alarms[$key]['ALARM_ID'] = htmlspecialchars($alarm['alarm_id'] ?? '');
+        $alarms[$key]['TIME'] = htmlspecialchars($alarm['time'] ?? '');
+        $alarms[$key]['DATE'] = htmlspecialchars($alarm['date'] ?? '');
+        $alarms[$key]['ENABLED'] = !empty($alarm['enabled']) ? 'Да' : 'Нет';
+        $alarms[$key]['RECURRING'] = htmlspecialchars(!empty($alarm['recurring']['days_of_week']) ? implode(', ', $alarm['recurring']['days_of_week']) : '');
+    }
+    $out['ALARMS'] = $alarms;
+    $out['TODAY'] = date('Y-m-d');
+
     foreach ($rec as $k => $v) {
         if (!is_array($v)) {
             $rec[$k] = htmlspecialchars($v);

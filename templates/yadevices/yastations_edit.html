@@ -197,6 +197,105 @@
 
 
 <div class="panel panel-default ya-station-panel">
+	<div class="panel-heading">Настройки станции</div>
+	<div class="panel-body">
+        [#if STATION_CONFIG_UNAVAILABLE="1"#]
+            <div class="alert alert-warning">Конфигурация станции недоступна через Яндекс API.</div>
+        [#else#]
+		<form action="?id=<#ID#>" method="post" class="form-horizontal">
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Не беспокоить</label>
+                <div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+                    [#if STATION_DND_SUPPORTED="1"#]
+                    <label class="checkbox-inline"><input type="checkbox" name="dnd" value="1" [#if STATION_DND="1"#]checked[#endif#]> Включить DND</label>
+                    [#else#]
+                    <span class="text-muted">Не поддерживается устройством</span>
+                    [#endif#]
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Beta / язык</label>
+                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12">
+                    <label class="checkbox-inline"><input type="checkbox" name="beta" value="1" [#if STATION_BETA="1"#]checked[#endif#]> Beta-функции</label>
+                </div>
+                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12">
+                    <select name="locale" class="form-control">
+                        <option value="ru-RU" [#if STATION_LOCALE="ru-RU"#]selected[#endif#]>ru-RU</option>
+                        <option value="en-US" [#if STATION_LOCALE="en-US"#]selected[#endif#]>en-US</option>
+                        <option value="kk-KZ" [#if STATION_LOCALE="kk-KZ"#]selected[#endif#]>kk-KZ</option>
+                        <option value="tr-TR" [#if STATION_LOCALE="tr-TR"#]selected[#endif#]>tr-TR</option>
+                        <option value="ar-SA" [#if STATION_LOCALE="ar-SA"#]selected[#endif#]>ar-SA</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">LED / экран</label>
+                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12">
+                    <input name="led_brightness" value="[#STATION_LED_BRIGHTNESS#]" class="form-control" placeholder="0..1, пусто = не менять, -1 = авто">
+                    <p class="help-block">Яркость LED/часов поддерживается не всеми станциями.</p>
+                </div>
+                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12">
+                    <select name="visualization" class="form-control">
+                        <option value="">Не менять визуализацию</option>
+                        <option value="clock" [#if STATION_VISUALIZATION="clock"#]selected[#endif#]>Показывать часы</option>
+                        <option value="auto" [#if STATION_VISUALIZATION="auto"#]selected[#endif#]>Авто-визуализация музыки</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group text-center">
+                <button type="submit" class="btn btn-success"><i class="glyphicon glyphicon-floppy-disk"></i> Сохранить настройки станции</button>
+                <input type="hidden" name="id" value="<#ID#>">
+                <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+                <input type="hidden" name="mode" value="update_station_settings">
+            </div>
+        </form>
+        [#endif#]
+	</div>
+</div>
+
+<div class="panel panel-default ya-station-panel">
+	<div class="panel-heading">Будильники</div>
+	<div class="panel-body">
+        <form action="?id=<#ID#>" method="post" class="form-inline" style="margin-bottom:14px;">
+            <div class="form-group">
+                <input type="date" name="alarm_date" value="[#TODAY#]" class="form-control">
+            </div>
+            <div class="form-group">
+                <input type="time" name="alarm_time" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-success"><i class="glyphicon glyphicon-time"></i> Создать</button>
+            <input type="hidden" name="id" value="<#ID#>">
+            <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+            <input type="hidden" name="mode" value="create_alarm">
+        </form>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead><tr><th>Дата</th><th>Время</th><th>Повтор</th><th>Включен</th><th></th></tr></thead>
+                <tbody>
+                [#begin ALARMS#]
+                    <tr>
+                        <td>[#DATE#]</td>
+                        <td>[#TIME#]</td>
+                        <td>[#RECURRING#]</td>
+                        <td>[#ENABLED#]</td>
+                        <td class="text-right">
+                            <form action="?id=<#ID#>" method="post" style="display:inline;">
+                                <input type="hidden" name="alarm_id" value="[#ALARM_ID#]">
+                                <input type="hidden" name="id" value="<#ID#>">
+                                <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+                                <input type="hidden" name="mode" value="cancel_alarm">
+                                <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Удалить будильник?')"><i class="glyphicon glyphicon-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                [#end ALARMS#]
+                </tbody>
+            </table>
+        </div>
+	</div>
+</div>
+
+<div class="panel panel-default ya-station-panel">
 	<div class="panel-heading">Тестирование и отладка</div>
 	<div class="panel-body" style="background: url([#ICON_URL#]);background-size: 350px Auto;background-repeat: no-repeat;background-position: right top;">
 		<form action="?id=<#ID#>" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
@@ -283,6 +382,27 @@
 				<input type="hidden" name="mode" value="send_text">
 			</div>
 		</form>
+        [#if LOCAL_AVAILABLE="1"#]
+        <hr>
+        <form action="?id=<#ID#>" method="post" class="form-horizontal">
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Спросить Алису</label>
+                <div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+                    <input name="ask_text" value="[#ASK_TEXT#]" class="form-control" placeholder="Например: какая сейчас погода?">
+                    <p class="help-block">Conversation работает через локальный Glagol и возвращает текст ответа, если колонка его отдала.</p>
+                </div>
+            </div>
+            [#if ASK_ANSWER!=""#]
+            <div class="alert alert-info"><b>Ответ:</b> [#ASK_ANSWER#]</div>
+            [#endif#]
+            <div class="form-group text-center">
+                <button type="submit" class="btn btn-primary"><i class="glyphicon glyphicon-comment"></i> Спросить</button>
+                <input type="hidden" name="id" value="<#ID#>">
+                <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+                <input type="hidden" name="mode" value="ask_alice">
+            </div>
+        </form>
+        [#endif#]
 	</div>
 </div>
 

@@ -173,6 +173,12 @@ class yadevices extends module
 		if (!empty($params['getonline'])) {
             $this->onlineStations();
         }
+        if (!empty($params['notify'])) {
+            $command = $params['command'] ?? 'text';
+            $data = $params['data'] ?? ($params['say'] ?? '');
+            $this->sendNotifyGroup($params['notify'], $command, $data);
+            return;
+        }
 		
         //DebMes("API call: " . json_encode($params, JSON_UNESCAPED_UNICODE), 'yadevices');
 
@@ -305,6 +311,7 @@ class yadevices extends module
             $cycleIsOnTime = gr('cycleIsOnTime');
             $errorMonitor = gr('errorMonitor');
             $errorMonitorType = gr('errorMonitorType');
+            $notifyGroups = gr('notifyGroups');
 
             if ($errorMonitor == 'on') {
                 $this->config['ERRORMONITOR'] = 1;
@@ -315,6 +322,7 @@ class yadevices extends module
             }
 
             $this->config['RELOAD_TIME'] = $cycleIsOnTime ?? 10;
+            $this->config['NOTIFY_GROUPS'] = $this->normalizeNotifyGroupsText($notifyGroups);
             $this->saveConfig();
 
             setGlobal('cycle_yadevicesControl', 'restart');
@@ -338,6 +346,7 @@ class yadevices extends module
         $out['RELOAD_TIME'] = $this->config['RELOAD_TIME'];
         $out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
         $out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
+        $out['NOTIFY_GROUPS_TEXT'] = htmlspecialchars($this->notifyGroupsToText());
     }
 
     function auth(&$out) {
@@ -1269,6 +1278,85 @@ class yadevices extends module
         return $this->sendCloudTTS($station['IOT_ID'], $data, $command);
     }
 
+    function sendToStationAuto($station, $command, $data = '')
+    {
+        if (!is_array($station)) {
+            $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$station);
+        }
+        if (empty($station['ID'])) {
+            return false;
+        }
+        if (($station['TTS'] ?? 0) == 2 || !$this->isLocalCapablePlatform($station['PLATFORM'] ?? '')) {
+            return $this->sendCommandToStationCloud($station, $command, $data);
+        }
+        $sent = $this->sendCommandToStation($station, $command, $data);
+        if (!$sent && $this->canFallbackToCloud($station, $command)) {
+            return $this->sendCommandToStationCloud($station, $command, $data);
+        }
+        return $sent;
+    }
+
+    function parseNotifyGroups()
+    {
+        $groups = json_decode($this->config['NOTIFY_GROUPS'] ?? '{}', true);
+        return is_array($groups) ? $groups : array();
+    }
+
+    function notifyGroupsToText()
+    {
+        $this->getConfig();
+        $this->normalizeConfig();
+        $groups = $this->parseNotifyGroups();
+        $lines = array();
+        foreach ($groups as $name => $ids) {
+            $lines[] = $name . '=' . implode(',', array_map('intval', (array)$ids));
+        }
+        return implode("\n", $lines);
+    }
+
+    function normalizeNotifyGroupsText($text)
+    {
+        $groups = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string)$text) as $line) {
+            $line = trim($line);
+            if ($line == '' || strpos($line, '=') === false) {
+                continue;
+            }
+            list($name, $idsText) = explode('=', $line, 2);
+            $name = trim($name);
+            $ids = array();
+            foreach (explode(',', $idsText) as $id) {
+                $id = (int)trim($id);
+                if ($id > 0) {
+                    $ids[] = $id;
+                }
+            }
+            if ($name != '' && !empty($ids)) {
+                $groups[$name] = array_values(array_unique($ids));
+            }
+        }
+        return json_encode($groups, JSON_UNESCAPED_UNICODE);
+    }
+
+    function sendNotifyGroup($groupName, $command = 'text', $data = '')
+    {
+        $this->getConfig();
+        $this->normalizeConfig();
+        $groups = $this->parseNotifyGroups();
+        if (empty($groups[$groupName])) {
+            $this->writeLog('Notify-группа не найдена: ' . $groupName, true);
+            return false;
+        }
+        $ok = false;
+        foreach ($groups[$groupName] as $stationId) {
+            $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$stationId);
+            if (!empty($station['ID'])) {
+                $ok = $this->sendToStationAuto($station, $command, $data) || $ok;
+            }
+        }
+        return $ok;
+    }
+
     function sendCommandToStation($station, $command, $data = '', $volumeBefore = null)
     {
         if (empty($command)) return false;
@@ -1304,6 +1392,143 @@ class yadevices extends module
         return !empty($this->config['AUTHORIZED'])
             && !empty($station['IOT_ID'])
             && in_array($command, array('text', 'command', 'dialog', 'setVolume', 'volumeUp', 'volumeDown', 'play', 'stop', 'next', 'prev'), true);
+    }
+
+    function getStationQuasarConfig($station)
+    {
+        if (empty($station['IOT_ID'])) {
+            return false;
+        }
+        $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/v2/user/devices/' . $station['IOT_ID'] . '/configuration');
+        if (is_array($data) && ($data['status'] ?? '') == 'ok') {
+            return array(
+                'config' => $data['quasar_config'] ?? array(),
+                'version' => $data['quasar_config_version'] ?? '',
+            );
+        }
+        return false;
+    }
+
+    function setStationQuasarConfig($station, $config, $version)
+    {
+        if (empty($station['IOT_ID']) || $version == '') {
+            return false;
+        }
+        $result = $this->apiRequest(
+            'https://iot.quasar.yandex.ru/m/v3/user/devices/' . $station['IOT_ID'] . '/configuration/quasar',
+            'POST',
+            array('config' => $config, 'version' => $version)
+        );
+        return is_array($result) && ($result['status'] ?? '') == 'ok';
+    }
+
+    function updateStationQuasarSettings($station, $settings)
+    {
+        $data = $this->getStationQuasarConfig($station);
+        if (!$data) {
+            return false;
+        }
+        $config = $data['config'];
+
+        if (isset($settings['dnd']) && isset($config['dndMode'])) {
+            $config['dndMode']['enabled'] = (bool)$settings['dnd'];
+        }
+        if (isset($settings['beta'])) {
+            $config['beta'] = (bool)$settings['beta'];
+        }
+        if (!empty($settings['locale']) && in_array($settings['locale'], array('ru-RU', 'en-US', 'ar-SA', 'kk-KZ', 'tr-TR'), true)) {
+            $config['locale'] = $settings['locale'];
+        }
+        if (isset($settings['led_brightness']) && $settings['led_brightness'] !== '') {
+            $brightness = (float)$settings['led_brightness'];
+            $led = $config['led'] ?? array();
+            $led['brightness'] = ($brightness >= 0 && $brightness <= 1)
+                ? array('auto' => false, 'value' => $brightness)
+                : array('auto' => true, 'value' => 0.5);
+            $config['led'] = $led;
+        }
+        if (!empty($settings['visualization'])) {
+            $led = $config['led'] ?? array();
+            $led['music_equalizer_visualization'] = array(
+                'style' => 'showClock',
+                'auto' => $settings['visualization'] != 'clock',
+            );
+            $config['led'] = $led;
+        }
+
+        return $this->setStationQuasarConfig($station, $config, $data['version']);
+    }
+
+    function alarmHeaders()
+    {
+        return array(
+            'Accept: application/json',
+            'Origin: https://yandex.ru',
+            'x-ya-app-type: iot-app',
+            'x-ya-application: {"app_id":"unknown","uuid":"unknown","lang":"ru"}',
+        );
+    }
+
+    function getStationAlarms($station)
+    {
+        if (empty($station['STATION_ID'])) {
+            return array();
+        }
+        $result = $this->apiRequest(
+            'https://rpc.alice.yandex.ru/gproxy/get_alarms',
+            'POST',
+            array('device_ids' => array($station['STATION_ID'])),
+            0,
+            $this->alarmHeaders()
+        );
+        return is_array($result) && isset($result['alarms']) && is_array($result['alarms']) ? $result['alarms'] : array();
+    }
+
+    function createStationAlarm($station, $date, $time)
+    {
+        if (empty($station['STATION_ID']) || $date == '' || $time == '') {
+            return false;
+        }
+        $device = SQLSelectOne("SELECT DEVICE_TYPE FROM yadevices WHERE IOT_ID='" . DBSafe($station['IOT_ID']) . "'");
+        $deviceType = !empty($device['DEVICE_TYPE']) ? 'devices.types.smart_speaker.yandex.' . $device['DEVICE_TYPE'] : 'devices.types.smart_speaker';
+        $alarm = array(
+            'alarm_id' => '',
+            'enabled' => true,
+            'date' => $date,
+            'time' => $time,
+            'device_id' => $station['STATION_ID'],
+        );
+        $result = $this->apiRequest(
+            'https://rpc.alice.yandex.ru/gproxy/create_alarm',
+            'POST',
+            array('alarm' => $alarm, 'device_type' => $deviceType),
+            0,
+            $this->alarmHeaders()
+        );
+        return is_array($result) && (($result['status'] ?? 'ok') != 'error');
+    }
+
+    function cancelStationAlarm($station, $alarmId)
+    {
+        if (empty($station['STATION_ID']) || $alarmId == '') {
+            return false;
+        }
+        $result = $this->apiRequest(
+            'https://rpc.alice.yandex.ru/gproxy/cancel_alarms',
+            'POST',
+            array('device_alarm_ids' => array(array('alarm_id' => $alarmId, 'device_id' => $station['STATION_ID']))),
+            0,
+            $this->alarmHeaders()
+        );
+        return is_array($result) && (($result['status'] ?? 'ok') != 'error');
+    }
+
+    function askStation($station, $text)
+    {
+        if (empty($station['IP']) || empty($station['DEVICE_TOKEN']) || $text == '') {
+            return false;
+        }
+        return $this->sendGlagol('command', $text, $station['DEVICE_TOKEN'], $station['IP']);
     }
 
     function encodeQueuedCommand($command, $data = '', $volumeBefore = null)
@@ -1680,7 +1905,7 @@ EOD;
     }
 	
 ///////////////////////////////////////////////Утилиты////////////////////////////////////////////////////////
-    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
+    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0, $extraHeaders = array())
     {
         $debug = 0;
 
@@ -1703,6 +1928,9 @@ EOD;
                 'Content-type: application/json',
                 'x-csrf-token: ' . $this->csrf_token
             );
+            if (is_array($extraHeaders) && !empty($extraHeaders)) {
+                $headers = array_merge($headers, $extraHeaders);
+            }
             curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($YaCurl, CURLOPT_POST, true);
             if ($method != 'POST') {
@@ -1729,7 +1957,7 @@ EOD;
             $this->normalizeConfig();
 			if($this->config['AUTHORIZED'] == 1){
                 if (!$repeating && $this->refreshCookies()) {
-                    return $this->apiRequest($url, $method, $params, 1);
+                    return $this->apiRequest($url, $method, $params, 1, $extraHeaders);
                 }
 				if(file_exists(YADEVICES_COOKIE_PATH.'_back')){
 					copy(YADEVICES_COOKIE_PATH.'_back', YADEVICES_COOKIE_PATH);
@@ -1740,7 +1968,7 @@ EOD;
 						$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
 					} else {
 						$this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
-						return $this->apiRequest($url, $method, $params, $repeating);
+						return $this->apiRequest($url, $method, $params, $repeating, $extraHeaders);
 					}
 				}
 				say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
@@ -1771,7 +1999,7 @@ EOD;
                 dprint("REPEATING: ".$method." ".$url,false);
             }
             $this->csrf_token = '';
-            $data = $this->apiRequest($url, $method, $params, 1);
+            $data = $this->apiRequest($url, $method, $params, 1, $extraHeaders);
         }
         return $data;
     }
@@ -2182,6 +2410,7 @@ function detectStationIp($station)
             'ERRORMONITOR' => 0,
             'ERRORMONITORTYPE' => 2,
             'HIDDEN_SKILLS' => '[]',
+            'NOTIFY_GROUPS' => '{}',
         );
         foreach ($defaults as $key => $value) {
             if (!isset($this->config[$key])) {
