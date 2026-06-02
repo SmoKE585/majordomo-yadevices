@@ -35,7 +35,8 @@
             <div>
                 [#if LOCAL_CAPABLE="1"#]<span class="ya-status-pill ya-ok">local capable</span>[#else#]<span class="ya-status-pill ya-bad">local unsupported</span>[#endif#]
                 [#if LOCAL_AVAILABLE="1"#]<span class="ya-status-pill ya-ok">local ready</span>[#else#]<span class="ya-status-pill ya-wait">local needs IP/token</span>[#endif#]
-                [#if CLOUD_AVAILABLE="1"#]<span class="ya-status-pill ya-ok">cloud ready</span>[#else#]<span class="ya-status-pill ya-wait">cloud scenario missing</span>[#endif#]
+                [#if CLOUD_AVAILABLE="1"#]<span class="ya-status-pill ya-ok">cloud ready</span>[#else#]<span class="ya-status-pill ya-wait">cloud needs auth</span>[#endif#]
+                [#if CLOUD_AVAILABLE="1"#][#if CLOUD_SCENARIO_READY!="1"#]<span class="ya-status-pill ya-wait">scenario auto-create</span>[#endif#][#endif#]
             </div>
         </div>
 		<div class="ya-station-body">
@@ -135,7 +136,7 @@
 				[#endif#]
 				<div id="cloudTTSHelpHint" style="[#if TTS!="2"#]display:none;[#endif#]">
 					<p class="help-block" style="font-size: 1rem;margin-top: 5px;color:red;">
-						Если колонка не разговаривает через облако - попробуйте удалить системный сценарий облачного управления на <a href="?view_mode=search_scenarios">этой странице</a>, а после удаления - пересоздать сценарий, нажав <a href="?view_mode=refreshScenarios">сюда</a>.
+						Если колонка не разговаривает через облако - модуль автоматически найдет или создаст системный сценарий. Если это не помогло, удалите старый сценарий на <a href="?view_mode=search_scenarios">этой странице</a> и попробуйте отправить текст снова.
 					</p>
 				</div>
 			</div>
@@ -246,7 +247,7 @@
 					<div id="cloudTTSHelpHintdemo" style="[#if TTS!="2"#]display:none;[#endif#]">
 					<p class="help-block" style="font-size: 1rem;margin-top: 5px;"> Ограничение - 100 символов<br></p>
 						<p class="help-block" style="font-size: 1rem;margin-top: 5px;color:red;">
-							Если колонка не разговаривает через облако - попробуйте удалить системный сценарий облачного управления на <a href="?view_mode=search_scenarios">этой странице</a>, а после удаления - пересоздать сценарий, нажав <a href="?view_mode=refreshScenarios">сюда</a>.
+							Если колонка не разговаривает через облако - модуль автоматически найдет или создаст системный сценарий. Если это не помогло, удалите старый сценарий на <a href="?view_mode=search_scenarios">этой странице</a> и попробуйте отправить текст снова.
 						</p>
 					</div>
 				</div>

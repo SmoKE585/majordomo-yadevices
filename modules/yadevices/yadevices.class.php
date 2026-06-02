@@ -755,10 +755,110 @@ class yadevices extends module
 
     function yandex_decode($in)
     {
+        if (mb_substr($in, 0, 4) != 'мжд ') {
+            return $in;
+        }
         $in = mb_substr($in, 4);
         $MASK_EN = array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', '-');
         $MASK_RU = array('о', 'е', 'а', 'и', 'н', 'т', 'с', 'р', 'в', 'л', 'к', 'м', 'д', 'п', 'у', 'я', 'ы');
         return str_replace($MASK_RU, $MASK_EN, $in);
+    }
+
+    function yandexScenarioTrigger($iot_id)
+    {
+        return mb_substr($this->yandex_encode($iot_id), 4);
+    }
+
+    function buildCloudScenarioPayload($iot_id, $phrase, $action = 'phrase_action')
+    {
+        $capability = array(
+            'type' => 'devices.capabilities.quasar',
+            'state' => array(
+                'instance' => 'tts',
+                'value' => array(
+                    'text' => $phrase
+                )
+            )
+        );
+
+        if ($action == 'text_action') {
+            $capability = array(
+                'type' => 'devices.capabilities.quasar.server_action',
+                'state' => array(
+                    'instance' => 'text_action',
+                    'value' => $phrase
+                )
+            );
+        }
+
+        $nameEncode = $this->yandex_encode($iot_id);
+        return array(
+            'name' => $nameEncode,
+            'icon' => 'home',
+            'triggers' => array(array(
+                'trigger' => array(
+                    'type' => 'scenario.trigger.voice',
+                    'value' => $this->yandexScenarioTrigger($iot_id),
+                )
+            )),
+            'steps' => array(array(
+                'type' => 'scenarios.steps.actions.v2',
+                'parameters' => array(
+                    'items' => array(array(
+                        'id' => $iot_id,
+                        'type' => 'step.action.item.device',
+                        'value' => array(
+                            'id' => $iot_id,
+                            'item_type' => 'device',
+                            'capabilities' => array($capability)
+                        )
+                    ))
+                )
+            ))
+        );
+    }
+
+    function ensureCloudScenario($station)
+    {
+        if (empty($station['IOT_ID'])) {
+            return '';
+        }
+        if (!empty($station['TTS_SCENARIO'])) {
+            return $station['TTS_SCENARIO'];
+        }
+
+        $iot_id = $station['IOT_ID'];
+        $trigger = $this->yandexScenarioTrigger($iot_id);
+        $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
+        if (isset($data['scenarios']) && is_array($data['scenarios'])) {
+            foreach ($data['scenarios'] as $scenario) {
+                $scenarioTrigger = '';
+                if (!empty($scenario['triggers'][0]['value'])) {
+                    $scenarioTrigger = $scenario['triggers'][0]['value'];
+                } elseif (!empty($scenario['triggers'][0]['trigger']['value'])) {
+                    $scenarioTrigger = $scenario['triggers'][0]['trigger']['value'];
+                }
+
+                if ($this->yandex_decode($scenario['name'] ?? '') == strtolower($iot_id) || $scenarioTrigger == $trigger) {
+                    $station['TTS_SCENARIO'] = $scenario['id'];
+                    SQLUpdate('yastations', $station);
+                    return $station['TTS_SCENARIO'];
+                }
+            }
+        }
+
+        $payload = $this->buildCloudScenarioPayload($iot_id, 'Сценарий для MajorDoMo. Не удалять.', 'phrase_action');
+        $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v4/user/scenarios', 'POST', $payload);
+        if (is_array($result) && ($result['status'] ?? '') == 'ok') {
+            $station['TTS_SCENARIO'] = $result['scenario_id'] ?? ($result['id'] ?? '');
+            if (!empty($station['TTS_SCENARIO'])) {
+                SQLUpdate('yastations', $station);
+                return $station['TTS_SCENARIO'];
+            }
+        }
+
+        $this->writeLog('Ошибка создания сценария Cloud TTS. Ответ Яндекса: ' . json_encode($result, JSON_UNESCAPED_UNICODE), true);
+        return '';
     }
 
     function addScenarios($repeating = 0)
@@ -775,41 +875,12 @@ class yadevices extends module
         $stations = SQLSelect("SELECT * FROM yastations ORDER BY ID");
         foreach ($stations as $station) {
             $station_id = $station['IOT_ID'];
+            if ($station_id == '') {
+                continue;
+            }
             if (!isset($scenarios[strtolower($station_id)])) {
                 // add scenario
-                $nameEncode = $this->yandex_encode($station_id);
-                $payload = array(
-                    'name' => $nameEncode,
-                    'icon' => 'home',
-                    'triggers' => array(array(
-                        'trigger' => array(
-                            'type' => 'scenario.trigger.voice',
-                            'value' => mb_substr($nameEncode, 4),
-                        )
-                    )),
-                    'steps' => array(array(
-                        'type' => 'scenarios.steps.actions.v2',
-                        'parameters' => array(
-                            'items' => array(array(
-                                'id' => $station_id,
-                                'type' => 'step.action.item.device',
-                                'value' => array(
-                                    'id' => $station_id,
-                                    'item_type' => 'device',
-                                    'capabilities' => array(array(
-                                        'type' => 'devices.capabilities.quasar',
-                                        'state' => array(
-                                            'instance' => 'tts',
-                                            'value' => array(
-                                                'text' => 'Сценарий для МДМ. НЕ УДАЛЯТЬ!'
-                                            )
-                                        )
-                                   ))
-                                )
-                            ))
-                        )
-                    ))
-                );
+                $payload = $this->buildCloudScenarioPayload($station_id, 'Сценарий для MajorDoMo. Не удалять.', 'phrase_action');
                 
                 //dprint($payload, 0);
                 $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v4/user/scenarios', 'POST', $payload);
@@ -856,7 +927,7 @@ class yadevices extends module
 
     function sendCloudTTS($iot_id, $phrase, $action = 'phrase_action')
     {
-        $station_rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . $iot_id . "'");
+        $station_rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . DBSafe($iot_id) . "'");
 		$phrase = preg_replace('/\^.*/u', '', $phrase);
         $phrase = preg_replace('/\s+/u', ' ', $phrase);
 		$phrase = trim($phrase);
@@ -871,42 +942,21 @@ class yadevices extends module
         //phrase_action - просто сказать и не ждать
         //text_action - выполнит команду
 
-        if (!$station_rec['TTS_SCENARIO']) return;
+        $scenario_id = $this->ensureCloudScenario($station_rec);
+        if (!$scenario_id) return false;
 
-        $nameEncode = $this->yandex_encode($iot_id);
-
-        $payload = array(
-            'name' => $nameEncode,
-            'icon' => 'home',
-            'triggers' => array(array(
-                'trigger' => array(
-                    'type' => 'scenario.trigger.voice',
-                    'value' => $nameEncode,
-                )
-            )),
-            'steps' => array(array(
-                'type' => 'scenarios.steps.actions.v2',
-                'parameters' => array(
-                    'items' => array(array(
-                         'id' => $iot_id,
-                        'type' => 'step.action.item.device',
-                        'value' => array(
-                            'id' => $iot_id,
-                            'item_type' => 'device',
-                            'capabilities' => array(array(
-                                'type' => 'devices.capabilities.quasar.server_action',
-                                'state' => array(
-                                    'instance' => $action,
-                                    'value' => $phrase
-                                )
-                            ))
-                        )
-                    ))
-                )
-            ))
-        );
-        $scenario_id = $station_rec['TTS_SCENARIO'];
+        $payload = $this->buildCloudScenarioPayload($iot_id, $phrase, $action);
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v4/user/scenarios/' . $scenario_id, 'PUT', $payload);
+        if ((!is_array($result) || ($result['status'] ?? '') != 'ok') && !empty($station_rec['TTS_SCENARIO'])) {
+            $this->writeLog('Старый Cloud TTS сценарий не обновился, пробуем пересоздать: ' . json_encode($result, JSON_UNESCAPED_UNICODE), true);
+            $oldScenarioId = $station_rec['TTS_SCENARIO'];
+            $station_rec['TTS_SCENARIO'] = '';
+            SQLUpdate('yastations', $station_rec);
+            $scenario_id = $this->ensureCloudScenario($station_rec);
+            if ($scenario_id && $scenario_id != $oldScenarioId) {
+                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v4/user/scenarios/' . $scenario_id, 'PUT', $payload);
+            }
+        }
 
         if (is_array($result) && ($result['status'] ?? '') == 'ok') {
             $payload = array();
@@ -914,10 +964,10 @@ class yadevices extends module
             if (is_array($result) && ($result['status'] ?? '') == 'ok') {
                 return true;
             } else {
-                $this->writeLog("Fшибка вызова сценария для запуска CloudTTS. Ошибка: " . json_encode($result), true);
+                $this->writeLog("Ошибка вызова сценария для запуска Cloud TTS. Ошибка: " . json_encode($result, JSON_UNESCAPED_UNICODE), true);
             }
         } else {
-            $this->writeLog("Ошибка обновления сценария для запуска CloudTTS. Ошибка: " . json_encode($result), true);
+            $this->writeLog("Ошибка обновления сценария для запуска Cloud TTS. Ошибка: " . json_encode($result, JSON_UNESCAPED_UNICODE), true);
         }
         return false;
     }
@@ -1229,7 +1279,6 @@ class yadevices extends module
     {
         return !empty($this->config['AUTHORIZED'])
             && !empty($station['IOT_ID'])
-            && !empty($station['TTS_SCENARIO'])
             && in_array($command, array('text', 'command', 'dialog', 'setVolume', 'volumeUp', 'volumeDown', 'play', 'stop', 'next', 'prev'), true);
     }
 

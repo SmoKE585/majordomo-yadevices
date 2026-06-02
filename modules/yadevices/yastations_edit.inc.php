@@ -102,7 +102,8 @@ if ($this->mode == 'update') {
 if (is_array($rec)) {
     $rec['LOCAL_CAPABLE'] = $this->isLocalCapablePlatform($rec['PLATFORM'] ?? '') ? 1 : 0;
     $rec['LOCAL_AVAILABLE'] = ($rec['LOCAL_CAPABLE'] && !empty($rec['IP']) && !empty($rec['DEVICE_TOKEN'])) ? 1 : 0;
-    $rec['CLOUD_AVAILABLE'] = !empty($rec['TTS_SCENARIO']) ? 1 : 0;
+    $rec['CLOUD_AVAILABLE'] = (!empty($this->config['AUTHORIZED']) && !empty($rec['IOT_ID'])) ? 1 : 0;
+    $rec['CLOUD_SCENARIO_READY'] = !empty($rec['TTS_SCENARIO']) ? 1 : 0;
     $rec['IP_TEST_AVAILABLE'] = !empty($rec['IP']) ? 1 : 0;
     foreach ($rec as $k => $v) {
         if (!is_array($v)) {
