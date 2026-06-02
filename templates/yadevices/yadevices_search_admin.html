@@ -1,10 +1,57 @@
+<style>
+.ya-device-tools {display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;}
+.ya-device-search {min-width:280px;max-width:520px;flex:1;}
+.ya-skill-filter {background:#f8fafc;border:1px solid #dbe4ee;border-radius:12px;padding:12px;margin-bottom:14px;}
+.ya-skill-filter-title {font-weight:800;margin-bottom:8px;}
+.ya-skill-list {display:flex;gap:8px 16px;flex-wrap:wrap;margin-bottom:10px;}
+.ya-skill-list label {font-weight:500;margin:0;}
+.ya-device-name {display:flex;align-items:center;gap:8px;}
+.ya-device-name img {object-fit:contain;background:#f8fafc;border-radius:9px;padding:4px;flex:0 0 auto;}
+.ya-device-skill {font-weight:800;color:#0f766e;}
+.ya-device-arrow {color:#94a3b8;}
+.ya-device-title {font-weight:800;}
+.ya-device-empty {padding:24px;text-align:center;color:#64748b;}
+@media (max-width:767px) {
+    .ya-device-tools {display:block;}
+    .ya-device-search {max-width:none;margin-bottom:10px;}
+}
+</style>
+
 <div class="ya-panel-card">
-    <div class="ya-section-title">Устройства Яндекса</div>
+    <div class="ya-device-tools">
+        <div>
+            <div class="ya-section-title">Устройства Яндекса</div>
+            <div class="text-muted">Формат списка: навык -> устройство. Сейчас показано: [#DEVICE_COUNT#]</div>
+        </div>
+        <div class="ya-device-search">
+            <div class="input-group">
+                <span class="input-group-addon"><i class="glyphicon glyphicon-search"></i></span>
+                <input type="text" class="form-control" id="yaDeviceSearch" placeholder="Поиск по названию, навыку, комнате или дому">
+            </div>
+        </div>
+    </div>
+
+    <form action="?" method="post" class="ya-skill-filter">
+        <div class="ya-skill-filter-title">Показывать устройства навыков</div>
+        <div class="ya-skill-list">
+            [#begin SKILLS#]
+            <label class="checkbox-inline">
+                <input type="checkbox" name="visible_skills[]" value="[#ID#]" [#if CHECKED="1"#]checked[#endif#]> [#TITLE#]
+            </label>
+            [#end SKILLS#]
+        </div>
+        <button type="submit" class="btn btn-success btn-sm"><i class="glyphicon glyphicon-ok"></i> Сохранить фильтр</button>
+        <a href="?view_mode=search_yadevices&mode=save_skill_filter" class="btn btn-default btn-sm" onclick="$('.ya-skill-filter input[type=checkbox]').prop('checked', true); $('.ya-skill-filter').submit(); return false;">Показать все</a>
+        [#if HIDDEN_SKILL_COUNT!="0"#]<span class="text-muted" style="margin-left:8px;">Скрыто навыков: [#HIDDEN_SKILL_COUNT#]</span>[#endif#]
+        <input type="hidden" name="view_mode" value="search_yadevices">
+        <input type="hidden" name="mode" value="save_skill_filter">
+    </form>
+
     <div class="ya-table-card table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" id="yaDevicesTable">
             <thead>
                 <tr>
-                    <th>Название</th>
+                    <th>Навык -> устройство</th>
                     <th>Тип</th>
                     <th>Комната</th>
                     <th>Дом</th>
@@ -14,11 +61,17 @@
             </thead>
             <tbody>
             [#begin RESULT#]
-                <tr>
+                <tr data-search="[#SEARCH_TEXT#]">
                     <td>
-                        [#if VALUE !=''#]<a href="?view_mode=search_yadevices&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]" class="btn btn-xs btn-default" title="Переключить"><i class="glyphicon glyphicon-off"></i></a>[#endif VALUE#]
-                        <img src="[#ICON#]" width="34" height="34" style="object-fit:contain;background:#f8fafc;border-radius:9px;padding:4px;margin-right:7px;">
-                        <a href="?view_mode=edit_yadevices&id=[#ID#]"><b>[#TITLE#]</b></a>
+                        <div class="ya-device-name">
+                            [#if VALUE !=''#]<a href="?view_mode=search_yadevices&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]" class="btn btn-xs btn-default" title="Переключить"><i class="glyphicon glyphicon-off"></i></a>[#endif VALUE#]
+                            <img src="[#ICON#]" width="34" height="34">
+                            <a href="?view_mode=edit_yadevices&id=[#ID#]">
+                                <span class="ya-device-skill">[#SKILL_NAME#]</span>
+                                <span class="ya-device-arrow">-></span>
+                                <span class="ya-device-title">[#TITLE#]</span>
+                            </a>
+                        </div>
                     </td>
                     <td><span class="ya-badge ya-badge-info">[#DEVICE_TYPE#]</span></td>
                     <td>[#ROOM#]</td>
@@ -27,7 +80,25 @@
                     <td>[#UPDATED#]</td>
                 </tr>
             [#end RESULT#]
+                <tr id="yaDeviceNoRows" style="display:none;">
+                    <td colspan="6" class="ya-device-empty">Поиск ничего не нашел.</td>
+                </tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<script>
+$(function() {
+    $('#yaDeviceSearch').on('input', function() {
+        var query = $(this).val().toLowerCase();
+        var visible = 0;
+        $('#yaDevicesTable tbody tr[data-search]').each(function() {
+            var match = !query || ($(this).data('search') + '').indexOf(query) !== -1;
+            $(this).toggle(match);
+            if (match) visible++;
+        });
+        $('#yaDeviceNoRows').toggle(visible === 0);
+    });
+});
+</script>

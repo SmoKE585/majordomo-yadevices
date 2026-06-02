@@ -518,12 +518,13 @@ class yadevices extends module
                         $device_rec['ORIGINAL_TITLE'] = $device['name'];
                         $device_rec['CUSTOM_TITLE'] = 0;
 						$device_rec['DEVICE_TYPE'] = str_replace('smart_speaker.yandex.', '', $device['type']);
-						$device_rec['HOUSE'] = $house['name'];
-						$device_rec['ROOM'] = $device['room_name'] ?? "";
-						$device_rec['SKILL_ID'] = 'local';
-						$device_rec['UPDATED'] = date('Y-m-d H:i:s');
-						$device_rec['IOT_ID'] = $device['id'];
-						$device_rec['ID'] = SQLInsert('yadevices', $device_rec);
+                            $device_rec['HOUSE'] = $house['name'];
+                            $device_rec['ROOM'] = $device['room_name'] ?? "";
+                            $device_rec['SKILL_ID'] = 'local';
+                            $device_rec['SKILL_NAME'] = 'Яндекс Станция';
+                            $device_rec['UPDATED'] = date('Y-m-d H:i:s');
+                            $device_rec['IOT_ID'] = $device['id'];
+                            $device_rec['ID'] = SQLInsert('yadevices', $device_rec);
 					} else{
 						$update_station = false;
                         $device_rec['ORIGINAL_TITLE'] = $device['name'];
@@ -535,10 +536,14 @@ class yadevices extends module
 							$device_rec['HOUSE'] = $house['name'];
 							$update_station = true;
 						}
-						if($device_rec['SKILL_ID'] != 'local'){
-							$device_rec['SKILL_ID'] = 'local';
-							$update_station = true;
-						}
+                        if($device_rec['SKILL_ID'] != 'local'){
+                            $device_rec['SKILL_ID'] = 'local';
+                            $update_station = true;
+                        }
+                        if(($device_rec['SKILL_NAME'] ?? '') != 'Яндекс Станция'){
+                            $device_rec['SKILL_NAME'] = 'Яндекс Станция';
+                            $update_station = true;
+                        }
 						if($device_rec['ROOM'] != ($device['room_name'] ?? "")){
 							$device_rec['ROOM'] = $device['room_name'] ?? "";
 							$update_station = true;
@@ -592,10 +597,11 @@ class yadevices extends module
                         $device_rec['TITLE'] = $device['name'];
                     }
 					$device_rec['DEVICE_TYPE'] = $device['type'];
-					$device_rec['HOUSE'] = $house['name'];
-					$device_rec['ROOM'] = $device['room_name'] ?? "";
-					$device_rec['SKILL_ID'] = $device['skill_id'] ?? "";
-					$device_rec['UPDATED'] = date('Y-m-d H:i:s');
+                    $device_rec['HOUSE'] = $house['name'];
+                    $device_rec['ROOM'] = $device['room_name'] ?? "";
+                    $device_rec['SKILL_ID'] = $device['skill_id'] ?? "";
+                    $device_rec['SKILL_NAME'] = $device['skill_name'] ?? $device['skill']['name'] ?? $this->getSkillName($device_rec['SKILL_ID']);
+                    $device_rec['UPDATED'] = date('Y-m-d H:i:s');
 					if(empty($device_rec['ID'])) {
 						$device_rec['IOT_ID'] = $device['id'];
                         $device_rec['CUSTOM_TITLE'] = 0;
@@ -1115,6 +1121,24 @@ class yadevices extends module
         require(DIR_MODULES . $this->name . '/yadevices_search.inc.php');
     }
 
+    function getSkillName($skill_id)
+    {
+        static $cache = array();
+        if ($skill_id == '') {
+            return 'Без навыка';
+        }
+        if ($skill_id == 'local') {
+            return 'Яндекс Станция';
+        }
+        if (isset($cache[$skill_id])) {
+            return $cache[$skill_id];
+        }
+
+        $skill = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/skills/' . $skill_id);
+        $cache[$skill_id] = $skill['name'] ?? $skill_id;
+        return $cache[$skill_id];
+    }
+
     function search_scenarios(&$out)
     {
         require(DIR_MODULES . $this->name . '/yascenarios_search.inc.php');
@@ -1611,6 +1635,7 @@ class yadevices extends module
  yadevices: HOUSE varchar(100) NOT NULL DEFAULT ''
  yadevices: ROOM varchar(100) NOT NULL DEFAULT ''
  yadevices: SKILL_ID varchar(100) NOT NULL DEFAULT ''
+ yadevices: SKILL_NAME varchar(255) NOT NULL DEFAULT ''
  yadevices: UPDATED datetime
 
  yadevices_capabilities: ID int(10) unsigned NOT NULL auto_increment
@@ -1647,6 +1672,9 @@ EOD;
             }
             if (empty($known['CUSTOM_TITLE'])) {
                 SQLExec("ALTER TABLE `" . DBSafe($table) . "` ADD `CUSTOM_TITLE` tinyint(1) NOT NULL DEFAULT 0 AFTER `ORIGINAL_TITLE`");
+            }
+            if ($table == 'yadevices' && empty($known['SKILL_NAME'])) {
+                SQLExec("ALTER TABLE `" . DBSafe($table) . "` ADD `SKILL_NAME` varchar(255) NOT NULL DEFAULT '' AFTER `SKILL_ID`");
             }
         }
     }
@@ -2153,6 +2181,7 @@ function detectStationIp($station)
             'RELOAD_TIME' => 10,
             'ERRORMONITOR' => 0,
             'ERRORMONITORTYPE' => 2,
+            'HIDDEN_SKILLS' => '[]',
         );
         foreach ($defaults as $key => $value) {
             if (!isset($this->config[$key])) {
