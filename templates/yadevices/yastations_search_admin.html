@@ -1,54 +1,65 @@
 <style>
-.ya-station-grid {display:flex;flex-wrap:wrap;margin:0 -8px;}
-.ya-station-grid > div {padding:8px;}
+.ya-station-grid {display:flex;flex-wrap:wrap;margin:0 -6px;}
+.ya-station-grid > div {padding:6px;}
 .ya-station-card {
     position:relative;
     overflow:hidden;
-    min-height:220px;
+    min-height:146px;
     cursor:pointer;
     border:1px solid var(--ya-line);
-    border-radius:16px;
+    border-radius:13px;
     background:#fff;
-    box-shadow:0 12px 30px rgba(15,23,42,.08);
+    box-shadow:0 8px 22px rgba(15,23,42,.07);
     transition:transform .15s ease, box-shadow .15s ease;
 }
-.ya-station-card:hover {transform:translateY(-3px);box-shadow:0 18px 40px rgba(15,23,42,.13);}
+.ya-station-card:hover {transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,23,42,.11);}
 .ya-station-card.offline {opacity:.58;}
 .ya-station-cover {
     position:absolute;
-    right:-30px;
-    top:-30px;
-    width:170px;
-    height:170px;
+    right:-24px;
+    top:-32px;
+    width:120px;
+    height:120px;
     border-radius:50%;
     background-size:cover;
     background-position:center;
-    opacity:.18;
+    opacity:.14;
 }
-.ya-station-body {position:relative;padding:18px;}
-.ya-station-icon {width:78px;height:78px;object-fit:contain;background:#f8fafc;border-radius:18px;padding:8px;border:1px solid #edf2f7;}
-.ya-station-name {font-size:20px;font-weight:800;margin:12px 0 4px;}
+.ya-station-body {position:relative;padding:12px;}
+.ya-station-top {display:flex;align-items:flex-start;gap:10px;}
+.ya-station-icon {width:46px;height:46px;object-fit:contain;background:#f8fafc;border-radius:12px;padding:5px;border:1px solid #edf2f7;flex:0 0 auto;}
+.ya-station-main {min-width:0;flex:1 1 auto;}
+.ya-station-status {float:none;margin-left:8px;white-space:nowrap;}
+.ya-station-name {font-size:16px;font-weight:800;margin:0 0 3px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ya-meta {font-size:12px;color:var(--ya-muted);word-break:break-all;}
-.ya-track {margin-top:12px;padding:10px;border-radius:12px;background:#f8fafc;}
-.ya-volume-bar {height:7px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:8px;}
+.ya-station-meta-line {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ya-station-badges {margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;}
+.ya-track {margin-top:8px;padding:7px 9px;border-radius:9px;background:#f8fafc;font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ya-volume-bar {height:5px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:8px;}
 .ya-volume-bar span {display:block;height:100%;background:linear-gradient(90deg,#0f766e,#f59e0b);}
+@media (max-width: 1199px) {
+    .ya-station-name {white-space:normal;}
+}
 </style>
 
 [#if RESULT#]
 <div class="ya-station-grid">
     [#begin RESULT#]
-    <div class="col-md-6 col-sm-6 col-xs-12">
+    <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
         <div class="ya-station-card [#if IS_ONLINE!="1"#]offline[#endif#]" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=edit_yastations&id=[#ID#]'">
             [#if PLAYING="1"#]<div class="ya-station-cover" style="background-image:url('https://[#COVER#]120x120');"></div>[#endif#]
             <div class="ya-station-body">
-                <img class="ya-station-icon" src="[#ICON_URL#]">
-                <div class="pull-right">
-                    [#if IS_ONLINE="1"#]<span class="ya-badge ya-badge-ok">online</span>[#else#]<span class="ya-badge ya-badge-bad">offline</span>[#endif#]
+                <div class="ya-station-top">
+                    <img class="ya-station-icon" src="[#ICON_URL#]">
+                    <div class="ya-station-main">
+                        <div class="ya-station-name">[#TITLE#]</div>
+                        <div class="ya-meta ya-station-meta-line">[#PLATFORM#] · [#STATION_ID#]</div>
+                    </div>
+                    <div class="ya-station-status">
+                        [#if IS_ONLINE="1"#]<span class="ya-badge ya-badge-ok">online</span>[#else#]<span class="ya-badge ya-badge-bad">offline</span>[#endif#]
+                    </div>
                 </div>
-                <div class="ya-station-name">[#TITLE#]</div>
-                <div class="ya-meta">[#PLATFORM#] · [#STATION_ID#]</div>
-                <div class="ya-meta">IoT: [#IOT_ID#]</div>
-                <div style="margin-top:10px;">
+                <div class="ya-station-badges">
                     [#if TTS="0"#]<span class="ya-badge ya-badge-warn">TTS выключен</span>[#endif#]
                     [#if TTS="1"#]<span class="ya-badge ya-badge-info">TTS local</span>[#endif#]
                     [#if TTS="2"#]<span class="ya-badge ya-badge-ok">TTS cloud</span>[#endif#]
@@ -57,8 +68,7 @@
                 <div class="ya-volume-bar" title="Громкость [#VOLUME#]"><span style="width:[#VOLUME#]%;"></span></div>
                 [#if PLAYING="1"#]
                 <div class="ya-track">
-                    <b>[#TRACK#]</b><br>
-                    <span class="text-muted">[#ARTIST#]</span>
+                    <b>[#TRACK#]</b> <span class="text-muted">[#ARTIST#]</span>
                 </div>
                 [#else PLAYING#]
                 <div class="ya-track text-muted">Сейчас не воспроизводит</div>
