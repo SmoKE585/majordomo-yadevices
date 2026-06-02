@@ -197,6 +197,70 @@
 
 
 <div class="panel panel-default ya-station-panel">
+	<div class="panel-heading">Привязки MajorDoMo</div>
+	<div class="panel-body">
+        <form action="?id=<#ID#>" method="post" class="form-horizontal">
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Будильник</label>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="alarm_linked_object" id="alarm_linked_object" value="[#ALARM_LINKED_OBJECT#]" class="form-control" placeholder="Объект">
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="alarm_linked_property" id="alarm_linked_property" value="[#ALARM_LINKED_PROPERTY#]" class="form-control" placeholder="Свойство">
+                </div>
+                <div class="col-lg-2 col-md-2 col-sm-2 col-xs-12">
+                    [#module name="linkedobject" object_field="alarm_linked_object" property_field="alarm_linked_property" width="100%"#]
+                </div>
+                <div class="col-lg-10 col-md-10 col-sm-12 col-xs-12 col-lg-offset-2 col-md-offset-2">
+                    <p class="help-block">Если свойство установлено в дату/время, например <code>2026-06-03 07:30</code> или <code>03.06.2026 07:30</code>, модуль создаст будильник в Яндексе. Если свойство очистить, связанный будильник будет отключен/удален.</p>
+                    [#if ALARM_LINKED_ID!=""#]<p class="help-block">Текущий связанный alarm_id: <code>[#ALARM_LINKED_ID#]</code></p>[#endif#]
+                    [#if ALARM_LINKED_VALUE!=""#]<p class="help-block">Текущее связанное время: <code>[#ALARM_LINKED_VALUE#]</code></p>[#endif#]
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Вопрос Алисе</label>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="ask_question_linked_object" id="ask_question_linked_object" value="[#ASK_QUESTION_LINKED_OBJECT#]" class="form-control" placeholder="Объект">
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="ask_question_linked_property" id="ask_question_linked_property" value="[#ASK_QUESTION_LINKED_PROPERTY#]" class="form-control" placeholder="Свойство">
+                </div>
+                <div class="col-lg-2 col-md-2 col-sm-2 col-xs-12">
+                    [#module name="linkedobject" object_field="ask_question_linked_object" property_field="ask_question_linked_property" width="100%"#]
+                </div>
+                <div class="col-lg-10 col-md-10 col-sm-12 col-xs-12 col-lg-offset-2 col-md-offset-2">
+                    <p class="help-block">При изменении свойства модуль отправит текст в Алису через локальный Glagol.</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-lg-2 col-md-2 col-sm-12 col-xs-12">Ответ Алисы</label>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="ask_answer_linked_object" id="ask_answer_linked_object" value="[#ASK_ANSWER_LINKED_OBJECT#]" class="form-control" placeholder="Объект">
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-5 col-xs-12">
+                    <input type="text" name="ask_answer_linked_property" id="ask_answer_linked_property" value="[#ASK_ANSWER_LINKED_PROPERTY#]" class="form-control" placeholder="Свойство">
+                </div>
+                <div class="col-lg-2 col-md-2 col-sm-2 col-xs-12">
+                    [#module name="linkedobject" object_field="ask_answer_linked_object" property_field="ask_answer_linked_property" width="100%"#]
+                </div>
+                <div class="col-lg-10 col-md-10 col-sm-12 col-xs-12 col-lg-offset-2 col-md-offset-2">
+                    <p class="help-block">Текстовый ответ Алисы будет записан сюда, если колонка вернула текст ответа.</p>
+                </div>
+            </div>
+
+            <div class="form-group text-center">
+                <button type="submit" class="btn btn-success"><i class="glyphicon glyphicon-link"></i> Сохранить привязки</button>
+                <input type="hidden" name="id" value="<#ID#>">
+                <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+                <input type="hidden" name="mode" value="update_links">
+            </div>
+        </form>
+	</div>
+</div>
+
+<div class="panel panel-default ya-station-panel">
 	<div class="panel-heading">Настройки станции</div>
 	<div class="panel-body">
         [#if STATION_CONFIG_UNAVAILABLE="1"#]

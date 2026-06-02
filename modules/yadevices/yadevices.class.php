@@ -1188,6 +1188,7 @@ class yadevices extends module
     function delete_yastations($id)
     {
         $rec = SQLSelectOne("SELECT * FROM yastations WHERE ID='$id'");
+        $this->removeStationLinkedProperties($rec);
 		$device = SQLSelectOne("SELECT ID FROM yadevices WHERE IOT_ID='".$rec['IOT_ID']."'");
 		$this->delete_yadevice($device['ID']);
         // some action for related tables
@@ -1505,7 +1506,22 @@ class yadevices extends module
             0,
             $this->alarmHeaders()
         );
-        return is_array($result) && (($result['status'] ?? 'ok') != 'error');
+        if (!is_array($result) || (($result['status'] ?? 'ok') == 'error')) {
+            return false;
+        }
+        if (!empty($result['alarm']['alarm_id'])) {
+            return $result['alarm']['alarm_id'];
+        }
+        if (!empty($result['alarm_id'])) {
+            return $result['alarm_id'];
+        }
+        $alarms = $this->getStationAlarms($station);
+        foreach ($alarms as $alarm) {
+            if (($alarm['date'] ?? '') == $date && ($alarm['time'] ?? '') == $time) {
+                return $alarm['alarm_id'] ?? true;
+            }
+        }
+        return true;
     }
 
     function cancelStationAlarm($station, $alarmId)
@@ -1529,6 +1545,94 @@ class yadevices extends module
             return false;
         }
         return $this->sendGlagol('command', $text, $station['DEVICE_TOKEN'], $station['IP']);
+    }
+
+    function parseAlarmDateTime($value)
+    {
+        $value = trim((string)$value);
+        if ($value == '') {
+            return false;
+        }
+        $formats = array('Y-m-d H:i', 'Y-m-d H:i:s', 'Y-m-d\TH:i', 'd.m.Y H:i', 'd.m.Y H:i:s');
+        foreach ($formats as $format) {
+            $dt = DateTime::createFromFormat($format, $value);
+            if ($dt instanceof DateTime && $dt->format($format) == $value) {
+                return array($dt->format('Y-m-d'), $dt->format('H:i'));
+            }
+        }
+        return false;
+    }
+
+    function setLinkedStationAnswer($station, $answer)
+    {
+        if (!empty($station['ASK_ANSWER_LINKED_OBJECT']) && !empty($station['ASK_ANSWER_LINKED_PROPERTY'])) {
+            setGlobal(
+                $station['ASK_ANSWER_LINKED_OBJECT'] . '.' . $station['ASK_ANSWER_LINKED_PROPERTY'],
+                $answer,
+                array($this->name => 1),
+                $this->name . '.ask_answer'
+            );
+        }
+    }
+
+    function handleStationAlarmProperty($station, $value)
+    {
+        $value = trim((string)$value);
+        if ($value == '') {
+            if (!empty($station['ALARM_LINKED_ID'])) {
+                $this->cancelStationAlarm($station, $station['ALARM_LINKED_ID']);
+            } elseif (!empty($station['ALARM_LINKED_VALUE'])) {
+                $parsed = $this->parseAlarmDateTime($station['ALARM_LINKED_VALUE']);
+                if ($parsed) {
+                    $alarms = $this->getStationAlarms($station);
+                    foreach ($alarms as $alarm) {
+                        if (($alarm['date'] ?? '') == $parsed[0] && ($alarm['time'] ?? '') == $parsed[1] && !empty($alarm['alarm_id'])) {
+                            $this->cancelStationAlarm($station, $alarm['alarm_id']);
+                        }
+                    }
+                }
+            }
+            if (!empty($station['ALARM_LINKED_ID']) || !empty($station['ALARM_LINKED_VALUE'])) {
+                $station['ALARM_LINKED_ID'] = '';
+                $station['ALARM_LINKED_VALUE'] = '';
+                SQLUpdate('yastations', $station);
+            }
+            return true;
+        }
+
+        $parsed = $this->parseAlarmDateTime($value);
+        if (!$parsed) {
+            $this->writeLog('Некорректная дата/время будильника для ' . $station['TITLE'] . ': ' . $value, true);
+            return false;
+        }
+
+        if (!empty($station['ALARM_LINKED_ID'])) {
+            $this->cancelStationAlarm($station, $station['ALARM_LINKED_ID']);
+            $station['ALARM_LINKED_ID'] = '';
+        }
+        $alarmId = $this->createStationAlarm($station, $parsed[0], $parsed[1]);
+        if ($alarmId) {
+            $station['ALARM_LINKED_ID'] = is_string($alarmId) ? $alarmId : '';
+            $station['ALARM_LINKED_VALUE'] = $parsed[0] . ' ' . $parsed[1];
+            SQLUpdate('yastations', $station);
+            return true;
+        }
+        return false;
+    }
+
+    function handleStationAskProperty($station, $value)
+    {
+        $value = trim((string)$value);
+        if ($value == '') {
+            return false;
+        }
+        $answer = $this->askStation($station, $value);
+        if (is_array($answer)) {
+            $text = $answer['text'] ?? json_encode($answer, JSON_UNESCAPED_UNICODE);
+            $this->setLinkedStationAnswer($station, $text);
+            return true;
+        }
+        return false;
     }
 
     function encodeQueuedCommand($command, $data = '', $volumeBefore = null)
@@ -1706,6 +1810,17 @@ class yadevices extends module
 
     function propertySetHandle($object, $property, $value)
     {
+        $this->ensureRenameColumns();
+        $stations = SQLSelect("SELECT * FROM yastations WHERE (ALARM_LINKED_OBJECT='" . DBSafe($object) . "' AND ALARM_LINKED_PROPERTY='" . DBSafe($property) . "') OR (ASK_QUESTION_LINKED_OBJECT='" . DBSafe($object) . "' AND ASK_QUESTION_LINKED_PROPERTY='" . DBSafe($property) . "')");
+        foreach ($stations as $station) {
+            if ($station['ALARM_LINKED_OBJECT'] == $object && $station['ALARM_LINKED_PROPERTY'] == $property) {
+                $this->handleStationAlarmProperty($station, $value);
+            }
+            if ($station['ASK_QUESTION_LINKED_OBJECT'] == $object && $station['ASK_QUESTION_LINKED_PROPERTY'] == $property) {
+                $this->handleStationAskProperty($station, $value);
+            }
+        }
+
         $properties = SQLSelect("SELECT yadevices_capabilities.*, yadevices.IOT_ID FROM yadevices_capabilities LEFT JOIN yadevices ON yadevices_capabilities.YADEVICE_ID=yadevices.ID WHERE yadevices_capabilities.LINKED_OBJECT LIKE '" . DBSafe($object) . "' AND yadevices_capabilities.LINKED_PROPERTY LIKE '" . DBSafe($property) . "'");
         $total = count($properties);
         for ($i = 0; $i < $total; $i++) {
@@ -1786,8 +1901,10 @@ class yadevices extends module
      */
     function uninstall()
     {
-        SQLExec('DROP TABLE IF EXISTS yastations');
-        SQLExec('DROP TABLE IF EXISTS yadevices');
+        $stations = SQLSelect("SELECT * FROM yastations");
+        foreach ($stations as $station) {
+            $this->removeStationLinkedProperties($station);
+        }
 
         //Отвяжемся от свойств
         $req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
@@ -1796,6 +1913,8 @@ class yadevices extends module
             removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
         }
 
+        SQLExec('DROP TABLE IF EXISTS yastations');
+        SQLExec('DROP TABLE IF EXISTS yadevices');
         SQLExec('DROP TABLE IF EXISTS yadevices_capabilities');
         parent::uninstall();
     }
@@ -1843,6 +1962,14 @@ class yadevices extends module
  yastations: ICON_URL varchar(255) NOT NULL DEFAULT ''
  yastations: DEVICE_TOKEN varchar(255) NOT NULL DEFAULT ''
  yastations: TTS_SCENARIO varchar(255) NOT NULL DEFAULT ''
+ yastations: ALARM_LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
+ yastations: ALARM_LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
+ yastations: ALARM_LINKED_ID varchar(255) NOT NULL DEFAULT ''
+ yastations: ALARM_LINKED_VALUE varchar(255) NOT NULL DEFAULT ''
+ yastations: ASK_QUESTION_LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
+ yastations: ASK_QUESTION_LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
+ yastations: ASK_ANSWER_LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
+ yastations: ASK_ANSWER_LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
  yastations: ARTIST varchar(255) NOT NULL DEFAULT ''
  yastations: TRACK varchar(255) NOT NULL DEFAULT ''
  yastations: COVER varchar(255) NOT NULL DEFAULT ''
@@ -1901,6 +2028,47 @@ EOD;
             if ($table == 'yadevices' && empty($known['SKILL_NAME'])) {
                 SQLExec("ALTER TABLE `" . DBSafe($table) . "` ADD `SKILL_NAME` varchar(255) NOT NULL DEFAULT '' AFTER `SKILL_ID`");
             }
+            if ($table == 'yastations') {
+                $stationColumns = array(
+                    'ALARM_LINKED_OBJECT' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ALARM_LINKED_PROPERTY' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ALARM_LINKED_ID' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ALARM_LINKED_VALUE' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ASK_QUESTION_LINKED_OBJECT' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ASK_QUESTION_LINKED_PROPERTY' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ASK_ANSWER_LINKED_OBJECT' => "varchar(255) NOT NULL DEFAULT ''",
+                    'ASK_ANSWER_LINKED_PROPERTY' => "varchar(255) NOT NULL DEFAULT ''",
+                );
+                foreach ($stationColumns as $columnName => $definition) {
+                    if (empty($known[$columnName])) {
+                        SQLExec("ALTER TABLE `" . DBSafe($table) . "` ADD `" . DBSafe($columnName) . "` " . $definition);
+                    }
+                }
+            }
+        }
+    }
+
+    function removeStationLinkedProperties($station)
+    {
+        $pairs = array(
+            array('ALARM_LINKED_OBJECT', 'ALARM_LINKED_PROPERTY'),
+            array('ASK_QUESTION_LINKED_OBJECT', 'ASK_QUESTION_LINKED_PROPERTY'),
+            array('ASK_ANSWER_LINKED_OBJECT', 'ASK_ANSWER_LINKED_PROPERTY'),
+        );
+        foreach ($pairs as $pair) {
+            if (!empty($station[$pair[0]]) && !empty($station[$pair[1]])) {
+                removeLinkedProperty($station[$pair[0]], $station[$pair[1]], $this->name);
+            }
+        }
+    }
+
+    function syncStationLinkedProperty($oldObject, $oldProperty, $newObject, $newProperty)
+    {
+        if ($oldObject && $oldProperty && ($oldObject != $newObject || $oldProperty != $newProperty)) {
+            removeLinkedProperty($oldObject, $oldProperty, $this->name);
+        }
+        if ($newObject && $newProperty) {
+            addLinkedProperty($newObject, $newProperty, $this->name);
         }
     }
 	

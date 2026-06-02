@@ -6,6 +6,7 @@ if ($this->owner->name == 'panel') {
     $out['CONTROLPANEL'] = 1;
 }
 $table_name = 'yastations';
+$this->ensureRenameColumns();
 $rec = SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
 
 if ($this->mode == 'send_text') {
@@ -40,12 +41,39 @@ if ($this->mode == 'ask_alice') {
     $out['ASK_TEXT'] = gr('ask_text');
     $answer = $this->askStation($rec, $out['ASK_TEXT']);
     if (is_array($answer)) {
-        $out['ASK_ANSWER'] = htmlspecialchars($answer['text'] ?? json_encode($answer, JSON_UNESCAPED_UNICODE));
+        $answerText = $answer['text'] ?? json_encode($answer, JSON_UNESCAPED_UNICODE);
+        $this->setLinkedStationAnswer($rec, $answerText);
+        $out['ASK_ANSWER'] = htmlspecialchars($answerText);
         $out['OK_MSG'] = 'Ответ получен от локальной Алисы.';
     } else {
         $out['ERR'] = 1;
         $out['ERR_MSG'] = 'Не удалось получить ответ. Conversation работает только через локальный режим Glagol.';
     }
+}
+
+if ($this->mode == 'update_links') {
+    $old = $rec;
+    $rec['ALARM_LINKED_OBJECT'] = trim(gr('alarm_linked_object'));
+    $rec['ALARM_LINKED_PROPERTY'] = trim(gr('alarm_linked_property'));
+    $rec['ASK_QUESTION_LINKED_OBJECT'] = trim(gr('ask_question_linked_object'));
+    $rec['ASK_QUESTION_LINKED_PROPERTY'] = trim(gr('ask_question_linked_property'));
+    $rec['ASK_ANSWER_LINKED_OBJECT'] = trim(gr('ask_answer_linked_object'));
+    $rec['ASK_ANSWER_LINKED_PROPERTY'] = trim(gr('ask_answer_linked_property'));
+
+    $this->syncStationLinkedProperty($old['ALARM_LINKED_OBJECT'] ?? '', $old['ALARM_LINKED_PROPERTY'] ?? '', $rec['ALARM_LINKED_OBJECT'], $rec['ALARM_LINKED_PROPERTY']);
+    $this->syncStationLinkedProperty($old['ASK_QUESTION_LINKED_OBJECT'] ?? '', $old['ASK_QUESTION_LINKED_PROPERTY'] ?? '', $rec['ASK_QUESTION_LINKED_OBJECT'], $rec['ASK_QUESTION_LINKED_PROPERTY']);
+    $this->syncStationLinkedProperty($old['ASK_ANSWER_LINKED_OBJECT'] ?? '', $old['ASK_ANSWER_LINKED_PROPERTY'] ?? '', $rec['ASK_ANSWER_LINKED_OBJECT'], $rec['ASK_ANSWER_LINKED_PROPERTY']);
+
+    SQLUpdate($table_name, $rec);
+    if ($rec['ALARM_LINKED_OBJECT'] != '' && $rec['ALARM_LINKED_PROPERTY'] != '') {
+        $currentAlarmValue = gg($rec['ALARM_LINKED_OBJECT'] . '.' . $rec['ALARM_LINKED_PROPERTY']);
+        if (trim((string)$currentAlarmValue) != '') {
+            $this->handleStationAlarmProperty($rec, $currentAlarmValue);
+            $rec = SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
+        }
+    }
+    $out['OK'] = 1;
+    $out['OK_MSG'] = 'Привязки обновлены.';
 }
 
 if ($this->mode == 'update_station_settings') {
@@ -76,7 +104,14 @@ if ($this->mode == 'create_alarm') {
 }
 
 if ($this->mode == 'cancel_alarm') {
-    if ($this->cancelStationAlarm($rec, gr('alarm_id'))) {
+    $alarmId = gr('alarm_id');
+    if ($this->cancelStationAlarm($rec, $alarmId)) {
+        if (($rec['ALARM_LINKED_ID'] ?? '') == $alarmId) {
+            $rec['ALARM_LINKED_ID'] = '';
+            $rec['ALARM_LINKED_VALUE'] = '';
+            SQLUpdate($table_name, $rec);
+            $rec = SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
+        }
         $out['OK'] = 1;
         $out['OK_MSG'] = 'Будильник удален.';
     } else {
