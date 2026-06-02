@@ -312,7 +312,7 @@ class yadevices extends module
             $cycleIsOnTime = gr('cycleIsOnTime');
             $errorMonitor = gr('errorMonitor');
             $errorMonitorType = gr('errorMonitorType');
-            $notifyGroups = gr('notifyGroups');
+            $notifyGroups = $this->normalizeNotifyGroupsPost($_POST);
 
             if ($errorMonitor == 'on') {
                 $this->config['ERRORMONITOR'] = 1;
@@ -323,7 +323,7 @@ class yadevices extends module
             }
 
             $this->config['RELOAD_TIME'] = $cycleIsOnTime ?? 10;
-            $this->config['NOTIFY_GROUPS'] = $this->normalizeNotifyGroupsText($notifyGroups);
+            $this->config['NOTIFY_GROUPS'] = $notifyGroups;
             $this->saveConfig();
 
             setGlobal('cycle_yadevicesControl', 'restart');
@@ -348,6 +348,8 @@ class yadevices extends module
         $out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
         $out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
         $out['NOTIFY_GROUPS_TEXT'] = htmlspecialchars($this->notifyGroupsToText());
+        $out['NOTIFY_GROUPS'] = $this->prepareNotifyGroupsForTemplate();
+        $out['NOTIFY_STATIONS'] = $this->prepareNotifyStationsForTemplate();
     }
 
     function auth(&$out) {
@@ -1338,6 +1340,93 @@ class yadevices extends module
             }
         }
         return json_encode($groups, JSON_UNESCAPED_UNICODE);
+    }
+
+    function normalizeNotifyGroupsPost($post)
+    {
+        $names = isset($post['notify_group_names']) && is_array($post['notify_group_names']) ? $post['notify_group_names'] : array();
+        $stations = isset($post['notify_group_stations']) && is_array($post['notify_group_stations']) ? $post['notify_group_stations'] : array();
+        $groups = array();
+
+        foreach ($names as $index => $name) {
+            $name = trim((string)$name);
+            if ($name == '') {
+                continue;
+            }
+            $ids = array();
+            if (isset($stations[$index]) && is_array($stations[$index])) {
+                foreach ($stations[$index] as $stationId) {
+                    $stationId = (int)$stationId;
+                    if ($stationId > 0) {
+                        $ids[] = $stationId;
+                    }
+                }
+            }
+            if (!empty($ids)) {
+                $groups[$name] = array_values(array_unique($ids));
+            }
+        }
+
+        if (empty($groups) && isset($post['notifyGroups'])) {
+            return $this->normalizeNotifyGroupsText($post['notifyGroups']);
+        }
+
+        return json_encode($groups, JSON_UNESCAPED_UNICODE);
+    }
+
+    function prepareNotifyStationsForTemplate()
+    {
+        $stations = SQLSelect("SELECT ID, TITLE, ORIGINAL_TITLE FROM yastations ORDER BY TITLE");
+        foreach ($stations as $key => $station) {
+            $title = $station['TITLE'] ?: ($station['ORIGINAL_TITLE'] ?: ('Station #' . $station['ID']));
+            $stations[$key]['ID'] = (int)$station['ID'];
+            $stations[$key]['TITLE'] = htmlspecialchars($title);
+        }
+        return $stations;
+    }
+
+    function prepareNotifyGroupsForTemplate()
+    {
+        $groups = $this->parseNotifyGroups();
+        $stations = $this->prepareNotifyStationsForTemplate();
+        $result = array();
+        $index = 0;
+        foreach ($groups as $name => $ids) {
+            $items = array();
+            foreach ($stations as $station) {
+                $items[] = array(
+                    'GROUP_INDEX' => $index,
+                    'ID' => $station['ID'],
+                    'TITLE' => $station['TITLE'],
+                    'CHECKED' => in_array((int)$station['ID'], array_map('intval', (array)$ids), true) ? 1 : 0,
+                );
+            }
+            $result[] = array(
+                'INDEX' => $index,
+                'TITLE' => htmlspecialchars($name),
+                'STATIONS' => $items,
+            );
+            $index++;
+        }
+
+        if (empty($result)) {
+            $items = array();
+            foreach ($stations as $station) {
+                $items[] = array(
+                    'GROUP_INDEX' => 0,
+                    'ID' => $station['ID'],
+                    'TITLE' => $station['TITLE'],
+                    'CHECKED' => 0,
+                );
+            }
+            $result[] = array(
+                'INDEX' => 0,
+                'TITLE' => 'all',
+                'STATIONS' => $items,
+            );
+        }
+
+        return $result;
     }
 
     function sendNotifyGroup($groupName, $command = 'text', $data = '')

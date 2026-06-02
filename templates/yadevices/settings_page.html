@@ -40,8 +40,42 @@
         <div class="form-group">
             <label class="col-sm-3 control-label">Notify-группы</label>
             <div class="col-sm-9">
-                <textarea class="form-control" name="notifyGroups" rows="4" placeholder="all=1,2,3&#10;kitchen=5,8">[#NOTIFY_GROUPS_TEXT#]</textarea>
-                <p class="help-block">Одна группа на строку: <code>имя=ID_станции,ID_станции</code>. API: <code>/api/module/yadevices?notify=all&amp;command=text&amp;data=Текст</code> или <code>callAPI('/api/module/yadevices','GET',array('group'=>'all','command'=>'text','data'=>'Текст'));</code>.</p>
+                <div class="ya-notify-toolbar">
+                    <button type="button" class="btn btn-primary btn-sm" id="addNotifyGroup">
+                        <i class="glyphicon glyphicon-plus"></i> Добавить группу
+                    </button>
+                    <span class="ya-notify-hint">Выберите колонки, на которые будет уходить текст через API.</span>
+                </div>
+
+                <div id="notifyGroupsList" class="ya-notify-groups">
+                    [#begin NOTIFY_GROUPS#]
+                    <div class="ya-notify-group">
+                        <div class="ya-notify-group-head">
+                            <div class="ya-notify-name">
+                                <label>Название группы</label>
+                                <input type="text" class="form-control" name="notify_group_names[[#INDEX#]]" value="[#TITLE#]" placeholder="all">
+                            </div>
+                            <div class="ya-notify-actions">
+                                <button type="button" class="btn btn-default btn-xs ya-notify-select-all">Все</button>
+                                <button type="button" class="btn btn-default btn-xs ya-notify-clear">Очистить</button>
+                                <button type="button" class="btn btn-danger btn-xs ya-notify-remove">
+                                    <i class="glyphicon glyphicon-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ya-notify-stations">
+                            [#begin STATIONS#]
+                            <label class="ya-notify-station">
+                                <input type="checkbox" name="notify_group_stations[[#GROUP_INDEX#]][]" value="[#ID#]" [#if CHECKED==1#]checked[#endif#]>
+                                <span>[#TITLE#]</span>
+                            </label>
+                            [#end STATIONS#]
+                        </div>
+                    </div>
+                    [#end NOTIFY_GROUPS#]
+                </div>
+
+                <p class="help-block">API: <code>/api/module/yadevices?notify=all&amp;command=text&amp;data=Текст</code> или <code>callAPI('/api/module/yadevices','GET',array('group'=>'all','command'=>'text','data'=>'Текст'));</code>.</p>
             </div>
         </div>
 
@@ -52,11 +86,140 @@
     </form>
 </div>
 
+<script type="text/template" id="notifyGroupTemplate">
+    <div class="ya-notify-group">
+        <div class="ya-notify-group-head">
+            <div class="ya-notify-name">
+                <label>Название группы</label>
+                <input type="text" class="form-control" name="notify_group_names[__INDEX__]" value="" placeholder="all">
+            </div>
+            <div class="ya-notify-actions">
+                <button type="button" class="btn btn-default btn-xs ya-notify-select-all">Все</button>
+                <button type="button" class="btn btn-default btn-xs ya-notify-clear">Очистить</button>
+                <button type="button" class="btn btn-danger btn-xs ya-notify-remove">
+                    <i class="glyphicon glyphicon-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="ya-notify-stations">
+            [#begin NOTIFY_STATIONS#]
+            <label class="ya-notify-station">
+                <input type="checkbox" name="notify_group_stations[__INDEX__][]" value="[#ID#]">
+                <span>[#TITLE#]</span>
+            </label>
+            [#end NOTIFY_STATIONS#]
+        </div>
+    </div>
+</script>
+
+<style>
+.ya-notify-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.ya-notify-hint {
+    color: #6b7280;
+    font-size: 13px;
+}
+.ya-notify-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ya-notify-group {
+    border: 1px solid #dbe5ef;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 8px 20px rgba(20, 37, 63, 0.06);
+    padding: 14px;
+}
+.ya-notify-group-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.ya-notify-name {
+    flex: 1 1 auto;
+}
+.ya-notify-name label {
+    color: #607084;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.ya-notify-actions {
+    display: flex;
+    gap: 6px;
+    white-space: nowrap;
+}
+.ya-notify-stations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.ya-notify-station {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #fff;
+    color: #243244;
+    font-weight: 500;
+    cursor: pointer;
+}
+.ya-notify-station:hover {
+    border-color: #b8c7d9;
+    background: #f7fbff;
+}
+.ya-notify-station input {
+    margin: 0;
+}
+@media (max-width: 767px) {
+    .ya-notify-toolbar,
+    .ya-notify-group-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .ya-notify-actions {
+        flex-wrap: wrap;
+    }
+}
+</style>
+
 <script>
 $(function() {
     var errorDefault = '[#ERRORMONITORTYPE#]';
     if(errorDefault === '0') errorDefault = '1';
     errorHelpText(errorDefault);
+
+    var notifyIndex = $('#notifyGroupsList .ya-notify-group').length;
+
+    $('#addNotifyGroup').on('click', function() {
+        var template = $('#notifyGroupTemplate').html().replace(/__INDEX__/g, notifyIndex++);
+        $('#notifyGroupsList').append(template);
+        $('#notifyGroupsList .ya-notify-group:last input[type="text"]').focus();
+    });
+
+    $('#notifyGroupsList').on('click', '.ya-notify-remove', function() {
+        $(this).closest('.ya-notify-group').remove();
+    });
+
+    $('#notifyGroupsList').on('click', '.ya-notify-select-all', function() {
+        $(this).closest('.ya-notify-group').find('input[type="checkbox"]').prop('checked', true);
+    });
+
+    $('#notifyGroupsList').on('click', '.ya-notify-clear', function() {
+        $(this).closest('.ya-notify-group').find('input[type="checkbox"]').prop('checked', false);
+    });
 });
 function errorHelpText(id) {
     if(id === '1') {
