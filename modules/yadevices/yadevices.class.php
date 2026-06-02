@@ -2687,6 +2687,23 @@ function detectStationIp($station)
         return $this->getUserAgent() . ' MajorDoMo-YaDevices/1.0';
     }
 
+    function getOAuthDeviceId()
+    {
+        $this->getConfig();
+        $this->normalizeConfig();
+        if (empty($this->config['OAUTH_DEVICE_ID'])) {
+            $seed = ROOT . '|' . DIR_MODULES . '|' . php_uname('n');
+            $this->config['OAUTH_DEVICE_ID'] = 'majordomo-yadevices-' . substr(md5($seed), 0, 16);
+            $this->saveConfig();
+        }
+        return $this->config['OAUTH_DEVICE_ID'];
+    }
+
+    function getOAuthDeviceName()
+    {
+        return 'MajorDoMo YaDevices Module';
+    }
+
     function ensureCookieDir()
     {
         $cookie_dir = dirname(YADEVICES_COOKIE_PATH);
@@ -2793,6 +2810,8 @@ function detectStationIp($station)
         $post = array(
             'client_secret' => YADEVICES_X_TOKEN_CLIENT_SECRET,
             'client_id' => YADEVICES_X_TOKEN_CLIENT_ID,
+            'device_id' => $this->getOAuthDeviceId(),
+            'device_name' => $this->getOAuthDeviceName(),
         );
         $headers = array(
             'Ya-Client-Host: ' . $host,
