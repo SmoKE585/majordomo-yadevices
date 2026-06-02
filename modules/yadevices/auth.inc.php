@@ -95,7 +95,7 @@ if ($type == 'qr' || $type == 'browser') {
 	if ($csrf_token) {
 		$post = json_encode(['retpath' => 'https://passport.yandex.ru/']);
 		$headers = ["X-CSRF-Token: ".$csrf_token];
-	$auth = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/password/submit', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
+		$auth = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/password/submit', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => $this->getPassportAuthUserAgent()]);
 		$auth_data = json_decode($auth, true);
 		if (empty($auth_data['track_id'])) {
 			$out['ERR_MSG'] = 'Ошибка получения QR-сессии авторизации.';
@@ -106,7 +106,7 @@ if ($type == 'qr' || $type == 'browser') {
 						"magic_track_id"=> $auth_data['track_id'],
 						"track_id"=> "" ,
 				]);
-		$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file]);
+		$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => $this->getPassportAuthUserAgent()]);
 		$data = json_decode($result, true);
 		if (empty($data['link'])) {
 			$out['ERR_MSG'] = 'Ошибка получения ссылки QR-кода.';

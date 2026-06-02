@@ -1057,14 +1057,14 @@ class yadevices extends module
 			$csrf_token = gr('csrf_token');
 			$auth = urldecode(gr('auth'));
 			$headers = ["X-CSRF-Token: ".$csrf_token];
-            $result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code/status', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $auth, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
+            $result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code/status', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $auth, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => $this->getPassportAuthUserAgent()]);
             $data = json_decode($result, true);
 			if(($data["state"] ?? '') != "otp_auth_finished"){
 				echo '{"state": "waiting"}';
 				exit;
 			}
 			$post = http_build_query(["track_id" => $data['trackId'] ?? '']);
-			$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/sessions/get_session', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
+			$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/sessions/get_session', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => $this->getPassportAuthUserAgent()]);
             $data = json_decode($result, true);
 			//dprint($result,0);
 			rename($use_cookie_file, YADEVICES_COOKIE_PATH);
@@ -2680,6 +2680,11 @@ function detectStationIp($station)
     function getUserAgent()
     {
         return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
+    }
+
+    function getPassportAuthUserAgent()
+    {
+        return $this->getUserAgent() . ' MajorDoMo-YaDevices/1.0';
     }
 
     function ensureCookieDir()
