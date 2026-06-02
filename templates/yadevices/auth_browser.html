@@ -1,0 +1,73 @@
+<div class="ya-card ya-card-soft">
+    <h3>Авторизация в браузере</h3>
+    <p class="text-muted">
+        Откройте ссылку в браузере, где вы входите в нужный аккаунт Яндекса. Генерация ссылки создает только временную сессию авторизации и не заменяет текущие cookies модуля до успешного подтверждения.
+    </p>
+    <p>
+        <a href="[#AUTH_URL#]" target="_blank" class="btn btn-primary btn-lg">
+            <i class="glyphicon glyphicon-new-window"></i> Авторизация в браузере
+        </a>
+        <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default btn-lg"><#LANG_CANCEL#></a>
+    </p>
+
+    <form id="auth-form" action="?" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+        <input type="hidden" name="type" value="<#TYPE#>">
+        <input type="hidden" name="csrf_token" value="[#CSRF_TOKEN#]">
+        <input type="hidden" name="auth" value="[#AUTH#]">
+    </form>
+
+    <div id="status-info" class="alert alert-info" style="margin-top: 18px;">
+        <p id="status-message"><span class="ya-loader" style="display:inline-block;border-color:#93c5fd;border-top-color:#1d4ed8;"></span>Ожидание подтверждения авторизации в браузере...</p>
+    </div>
+
+    <div class="alert alert-warning">
+        Если ссылка не открывает нужный аккаунт, сначала войдите в Яндекс в этом браузере или откройте ссылку в приватном окне.
+    </div>
+</div>
+
+<script>
+function startBrowserAuthStatusCheck() {
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    const auth = document.querySelector('input[name="auth"]').value;
+    const pollInterval = 1000;
+
+    function checkStatus() {
+        $.ajax({
+            url: '/ajax/yadevices.html?check_qr_status=1',
+            type: 'POST',
+            data: {
+                csrf_token: csrfToken,
+                auth: auth
+            },
+            cache: false,
+            success: function(response) {
+                document.getElementById('status-message').textContent = 'Проверка статуса...';
+
+                if (response.state === 'otp_auth_finished') {
+                    document.getElementById('status-message').innerHTML =
+                        '<span style="color: green;">Авторизация успешно завершена.</span>';
+                    window.location.href =
+                        '?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+                } else if (response.state === 'auth_error') {
+                    document.getElementById('status-message').innerHTML =
+                        '<span style="color: red;">Ошибка авторизации.</span>';
+                    window.location.href =
+                        '?view_mode=auth&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
+                } else {
+                    setTimeout(checkStatus, pollInterval);
+                }
+            },
+            error: function() {
+                setTimeout(checkStatus, pollInterval);
+            }
+        });
+    }
+
+    checkStatus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    startBrowserAuthStatusCheck();
+});
+</script>

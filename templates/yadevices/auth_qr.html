@@ -1,7 +1,6 @@
 <div class="ya-card ya-card-soft">
 <p>
-    Отсканируйте QR-код с помощью Умной камеры в приложении Яндекс или перейдите по кнопке ниже:<br>
-	 <a href="[#AUTH_URL#]" target="_blank" class="btn btn-primary">АВТОРИЗАЦИЯ В БРАУЗЕРЕ</a>
+    Отсканируйте QR-код с помощью Умной камеры в приложении Яндекс.
 </p>
 <form id="auth-form" action="?" method="post" enctype="multipart/form-data">
     <div class="form-group">
@@ -55,7 +54,7 @@ function startQRStatusCheck() {
 	
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+						'?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
 	
 				} else if (response.state === 'auth_error') {
 					// Ошибка авторизации — отправляем форму с state=error
@@ -64,7 +63,7 @@ function startQRStatusCheck() {
 		
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&error_msg=' + encodeURIComponent('Ошибка авторизации!');
+						'?view_mode=auth&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
 				} else {
 					// Если авторизация ещё не завершена, планируем следующий запрос
 					setTimeout(checkStatus, pollInterval);

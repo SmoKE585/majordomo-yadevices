@@ -89,7 +89,7 @@ if ($type == 'otp') {
     }
 }
 
-if ($type == 'qr') {
+if ($type == 'qr' || $type == 'browser') {
 	$use_cookie_file = YADEVICES_COOKIE_PATH.'_qr';
 	$csrf_token = $this->getCSRFToken($use_cookie_file);
 	if ($csrf_token) {
@@ -112,13 +112,15 @@ if ($type == 'qr') {
 			$out['ERR_MSG'] = 'Ошибка получения ссылки QR-кода.';
 			return;
 		}
-		include_once(ROOT . "modules/yadevices/phpqrcode/qrlib.php");
-		$path = ROOT . "cms/cached/yaqrcode.png";
-		QRcode::png($data['link'], $path, QR_ECLEVEL_L, 9, 2);
+		if ($type == 'qr') {
+			include_once(ROOT . "modules/yadevices/phpqrcode/qrlib.php");
+			$path = ROOT . "cms/cached/yaqrcode.png";
+			QRcode::png($data['link'], $path, QR_ECLEVEL_L, 9, 2);
+			$out['QR_URL'] = "cms/cached/yaqrcode.png";
+		}
 		$out['TRACK_ID'] = $auth_data['track_id'];
 		$out['CSRF_TOKEN'] = $csrf_token;
 		$out['AUTH'] = urlencode($auth);
-		$out['QR_URL'] = "cms/cached/yaqrcode.png";
 		$out['AUTH_URL'] = $data['link'];	
 	} else {
 		$out['ERR_MSG'] = 'Ошибка получения CSRF-токена';

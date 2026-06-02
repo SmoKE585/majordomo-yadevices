@@ -78,16 +78,16 @@ button.loading .ya-loader, .btn.loading .ya-loader {display: inline-block;}
     </div>
     <div class="col-md-3 col-sm-6 col-xs-12">
         <div class="ya-card">
-            <h3>Cookie</h3>
-            <p class="text-muted">Поддерживает Netscape-файл, JSON cookies или raw cookie string.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=cookie" class="btn btn-default btn-block"><i class="glyphicon glyphicon-upload"></i> Загрузить</a>
+            <h3>Браузер</h3>
+            <p class="text-muted">Модуль создаст ссылку входа. Откройте её в браузере, где уже есть аккаунт Яндекса.</p>
+            <a href="?view_mode=<#VIEW_MODE#>&type=browser" class="btn btn-primary btn-block"><i class="glyphicon glyphicon-new-window"></i> Открыть вход</a>
         </div>
     </div>
     <div class="col-md-3 col-sm-6 col-xs-12">
         <div class="ya-card">
-            <h3>x-token</h3>
-            <p class="text-muted">Обычно получать вручную не нужно: QR/Cookie сами сохранят x-token. Ручной ввод полезен для миграции из HASS.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=token" class="btn btn-default btn-block"><i class="glyphicon glyphicon-lock"></i> Вставить token</a>
+            <h3>Cookie</h3>
+            <p class="text-muted">Поддерживает Netscape-файл, JSON cookies или raw cookie string.</p>
+            <a href="?view_mode=<#VIEW_MODE#>&type=cookie" class="btn btn-default btn-block"><i class="glyphicon glyphicon-upload"></i> Загрузить</a>
         </div>
     </div>
     <div class="col-md-3 col-sm-6 col-xs-12">
@@ -107,6 +107,7 @@ button.loading .ya-loader, .btn.loading .ya-loader {display: inline-block;}
 [#if TYPE="cookie"#][#inc auth_cookie.html#][#endif TYPE#]
 [#if TYPE="token"#][#inc auth_token.html#][#endif TYPE#]
 [#if TYPE="qr"#][#inc auth_qr.html#][#endif TYPE#]
+[#if TYPE="browser"#][#inc auth_browser.html#][#endif TYPE#]
 
 <script>
 $(function() {
