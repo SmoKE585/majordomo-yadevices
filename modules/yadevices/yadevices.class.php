@@ -38,6 +38,8 @@ use \WSSC\Components\ClientConfig;
 //
 class yadevices extends module
 {
+    private $lastAuthRefreshError = '';
+
     /**
      * yadevices
      *
@@ -190,7 +192,7 @@ class yadevices extends module
 			//Облачная отправка
             $forceCloud = !empty($params['cloud']);
             if (($station['TTS'] == 2 && $station['IOT_ID'] != '') || $forceCloud) {
-				if(empty($this->config['AUTHORIZED'])) return;
+				if(!$this->ensureAuthorized()) return;
 				if($params['command'] == 'setVolume') {
 					$params['data'] = $params['volume'] ?? $params['data'];
 					//У ТВСтанций от 1 до 100
@@ -485,7 +487,7 @@ class yadevices extends module
     {
 		$this->getConfig();
         $this->normalizeConfig();
-		if($this->config['AUTHORIZED'] == 0) return false;
+		if(!$this->ensureAuthorized()) return false;
 		$this->writeLog('Обновляем устройства.');
         $iot_ids = array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/v3/user/devices');
@@ -1480,7 +1482,7 @@ class yadevices extends module
 
     function canFallbackToCloud($station, $command)
     {
-        return !empty($this->config['AUTHORIZED'])
+        return $this->ensureAuthorized()
             && !empty($station['IOT_ID'])
             && in_array($command, array('text', 'command', 'dialog', 'setVolume', 'volumeUp', 'volumeDown', 'play', 'stop', 'next', 'prev'), true);
     }
@@ -2213,21 +2215,17 @@ EOD;
 		if($info['http_code'] == 401){
 			$this->getConfig();
             $this->normalizeConfig();
-			if($this->config['AUTHORIZED'] == 1){
+			$canRefreshAuth = !empty($this->config['X_TOKEN']);
+			if($this->config['AUTHORIZED'] == 1 || $canRefreshAuth){
                 if (!$repeating && $this->refreshCookies()) {
                     return $this->apiRequest($url, $method, $params, 1, $extraHeaders);
                 }
-				if(file_exists(YADEVICES_COOKIE_PATH.'_back')){
-					copy(YADEVICES_COOKIE_PATH.'_back', YADEVICES_COOKIE_PATH);
-					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-					if (!is_array($checkCookie) || ($checkCookie['status'] ?? '') != 'ok') {
-						@unlink(YADEVICES_COOKIE_PATH);
-						@unlink(YADEVICES_COOKIE_PATH.'_back');
-						$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
-					} else {
-						$this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
-						return $this->apiRequest($url, $method, $params, $repeating, $extraHeaders);
-					}
+				if(!$repeating && $this->restoreBackupCookies()){
+					return $this->apiRequest($url, $method, $params, 1, $extraHeaders);
+				}
+				if (!in_array($this->lastAuthRefreshError ?? '', array('missing_x_token', 'invalid_x_token'), true)) {
+					$this->writeLog('Авторизация временно недоступна, но x-token сохранен. Повторим восстановление позже.', true);
+					return 'Unauthorized';
 				}
 				if(method_exists($this, 'sendnotification')) {
 					$this->sendnotification('Авторизация отсутствует', 'warning ');
@@ -2874,37 +2872,101 @@ function detectStationIp($station)
         if ($trackId == '') {
             return false;
         }
-        $this->curl($host . '/auth/session/?' . http_build_query(array('track_id' => $trackId)), $cookieFile, '', '', array(
+        $sessionResult = $this->curl($host . '/auth/session/?' . http_build_query(array('track_id' => $trackId)), $cookieFile, '', '', array(
             CURLOPT_COOKIEFILE => $cookieFile,
             CURLOPT_COOKIEJAR => $cookieFile,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_HEADER => true,
         ));
+        if (stripos($sessionResult, '/auth/finish') === false && stripos($sessionResult, 'Set-Cookie:') === false) {
+            $this->writeLog("Ошибка создания cookie-сессии по x-token:\n" . $sessionResult);
+            return false;
+        }
 
         return true;
+    }
+
+    function ensureAuthorized($forceRefresh = false)
+    {
+        $this->getConfig();
+        $this->normalizeConfig();
+
+        if (!$forceRefresh && !empty($this->config['AUTHORIZED']) && file_exists(YADEVICES_COOKIE_PATH)) {
+            return true;
+        }
+
+        if (empty($this->config['X_TOKEN'])) {
+            return !empty($this->config['AUTHORIZED']) && file_exists(YADEVICES_COOKIE_PATH);
+        }
+
+        if ($this->refreshCookies()) {
+            return true;
+        }
+
+        if ($this->restoreBackupCookies()) {
+            return true;
+        }
+
+        return !empty($this->config['AUTHORIZED']) && file_exists(YADEVICES_COOKIE_PATH);
+    }
+
+    function restoreBackupCookies()
+    {
+        if (!file_exists(YADEVICES_COOKIE_PATH . '_back')) {
+            return false;
+        }
+
+        copy(YADEVICES_COOKIE_PATH . '_back', YADEVICES_COOKIE_PATH);
+        if ($this->checkCookiesAuthorized(YADEVICES_COOKIE_PATH)) {
+            $this->completeAuthFromCookies(YADEVICES_COOKIE_PATH);
+            $this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
+            return true;
+        }
+
+        @unlink(YADEVICES_COOKIE_PATH);
+        @unlink(YADEVICES_COOKIE_PATH . '_back');
+        $this->writeLog('Бэкап cookie устарел или не подходит для автоматической авторизации.', true);
+        return false;
+    }
+
+    function checkCookiesAuthorized($cookieFile = YADEVICES_COOKIE_PATH)
+    {
+        $checkResult = $this->curl('https://yandex.ru/quasar?storage=1', $cookieFile);
+        $check = json_decode($checkResult, true);
+        if (is_array($check) && !empty($check['storage']['user']['uid'])) {
+            return true;
+        }
+
+        $checkResult = $this->curl('https://iot.quasar.yandex.ru/m/user/scenarios', $cookieFile);
+        $check = json_decode($checkResult, true);
+        return is_array($check) && ($check['status'] ?? '') == 'ok';
     }
 
     function refreshCookies()
     {
         $this->getConfig();
         $this->normalizeConfig();
+        $this->lastAuthRefreshError = '';
         if ($this->config['X_TOKEN'] == '') {
+            $this->lastAuthRefreshError = 'missing_x_token';
             return false;
         }
         if (!$this->validateXToken($this->config['X_TOKEN'])) {
+            $this->lastAuthRefreshError = 'invalid_x_token';
             return false;
         }
         if (!$this->loginByXToken($this->config['X_TOKEN'])) {
+            $this->lastAuthRefreshError = 'login_failed';
             return false;
         }
         $this->csrf_token = null;
-        $check = $this->apiRequest('https://yandex.ru/quasar?storage=1', 'GET', 0, 1);
-        if (is_array($check) && !empty($check['storage']['user']['uid'])) {
+        if ($this->checkCookiesAuthorized(YADEVICES_COOKIE_PATH)) {
             copy(YADEVICES_COOKIE_PATH, YADEVICES_COOKIE_PATH . '_back');
             $this->config['AUTHORIZED'] = 1;
             $this->saveConfig();
             return true;
         }
+        $this->lastAuthRefreshError = 'cookie_check_failed';
         return false;
     }
 
