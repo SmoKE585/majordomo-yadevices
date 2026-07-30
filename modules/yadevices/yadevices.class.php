@@ -2229,7 +2229,6 @@ EOD;
 						return $this->apiRequest($url, $method, $params, $repeating, $extraHeaders);
 					}
 				}
-				say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
 				if(method_exists($this, 'sendnotification')) {
 					$this->sendnotification('Авторизация отсутствует', 'warning ');
 				}
