@@ -1,88 +1,32 @@
-<div class="ya-card ya-card-soft">
-<p>
-    Отсканируйте QR-код с помощью Умной камеры в приложении Яндекс.
-</p>
-<form id="auth-form" action="?" method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <img src="<#ROOTHTML#>[#QR_URL#]" alt="QR код для авторизации">
+<section class="md-card md-yv-auth-card">
+    <header class="md-card__head">
+        <div class="md-card__titles">
+            <div class="md-card__eyebrow">QR-код</div>
+            <h2 class="md-card__title">Сканирование в приложении Яндекс</h2>
+            <p class="md-card__subtitle">Откройте приложение Яндекс → «Умная камера» и отсканируйте код. Статус обновится автоматически.</p>
+        </div>
+        <div class="md-card__actions"><a href="?view_mode=auth" class="md-btn md-btn--ghost md-btn--sm"><i class="ti ti-arrow-left" aria-hidden="true"></i>Назад</a></div>
+    </header>
+    <div class="md-card__body md-yv-qr-body">
+        [#if QR_URL!=""#]
+        <div class="md-yv-qr">
+            <img src="[#QR_URL#]" alt="QR-код для входа в Яндекс" width="260" height="260">
+        </div>
+        [#else#]
+        <div class="md-empty md-empty--compact">
+            <span class="md-empty__icon"><i class="ti ti-qrcode" aria-hidden="true"></i></span>
+            <div class="md-empty__title">QR-код не создан</div>
+            <p class="md-empty__text">Попробуйте открыть страницу ещё раз или выберите другой способ входа.</p>
+        </div>
+        [#endif#]
+        <div class="md-yv-auth-status" data-yv-auth-poll
+             data-poll-url="[#AUTH_POLL_URL#]"
+             data-done-url="[#AUTH_DONE_URL#]"
+             data-error-url="[#AUTH_ERROR_URL#]"
+             data-csrf="[#CSRF_TOKEN#]"
+             data-auth="[#AUTH#]">
+            <span class="md-status md-status--warning"><span class="md-status__dot"></span>Ожидание сканирования…</span>
+        </div>
+        <p class="md-yv-auth-note">Если статус не меняется больше минуты, обновите страницу и получите новый QR-код.</p>
     </div>
-    <div class="form-group">
-        <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
-    </div>
-
-    <!-- Скрытые поля с необходимыми данными -->
-    <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
-    <input type="hidden" name="type" value="<#TYPE#>">
-    <input type="hidden" name="csrf_token" value="[#CSRF_TOKEN#]">
-    <input type="hidden" name="auth" value="[#AUTH#]">
-</form>
-
-<!-- Блок для отображения статуса проверки -->
-<div id="status-info" class="alert alert-info" style="margin-top: 20px;">
-    <p id="status-message"><span class="ya-loader" style="display:inline-block;border-color:#93c5fd;border-top-color:#1d4ed8;"></span>Ожидание сканирования QR кода...</p>
-</div>
-</div>
-
-<script>
-// Функция для периодической проверки статуса авторизации
-function startQRStatusCheck() {
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    const auth = document.querySelector('input[name="auth"]').value;
-    const adminRedirectUrl = '/admin.php?pd=pz_&md=panel&inst=&action=yadevices';
-
-    const pollInterval = 1000; // Интервал 1 секунда
-
-    function checkStatus() {
-        // Отправляем AJAX запрос для проверки статуса
-        $.ajax({
-            url: '/ajax/yadevices.html?check_qr_status=1',
-            type: 'POST',
-            data: {
-                csrf_token: csrfToken,
-                auth: auth
-            },
-            cache: false,
-            success: function(response) {
-                // Обновляем сообщение о статусе
-                document.getElementById('status-message').textContent =
-                    'Проверка статуса...';
-
-                // Проверяем, завершена ли авторизация
-                if (response.state === 'otp_auth_finished') {
-                    // Авторизация завершена — останавливаем опрос и отправляем форму с state=ok
-                    document.getElementById('status-message').innerHTML =
-					'<span style="color: green;">Авторизация успешно завершена!</span>';
-	
-					// Выполняем перенаправление с параметрами (без задержки)
-					window.location.href =
-						adminRedirectUrl + '&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
-	
-				} else if (response.state === 'auth_error') {
-					// Ошибка авторизации — отправляем форму с state=error
-					document.getElementById('status-message').innerHTML =
-						'<span style="color: red;">Ошибка авторизации.</span>';
-		
-					// Выполняем перенаправление с параметрами (без задержки)
-					window.location.href =
-						adminRedirectUrl + '&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
-				} else {
-					// Если авторизация ещё не завершена, планируем следующий запрос
-					setTimeout(checkStatus, pollInterval);
-				}
-			},
-			error: function() {
-				console.error('Ошибка при проверке статуса авторизации');
-				// При ошибке повторяем запрос через секунду
-				setTimeout(checkStatus, pollInterval);
-			}
-		});
-	}
-	// Запускаем первую проверку
-	checkStatus();
-}
-
-// Запускаем проверку статуса после загрузки страницы
-document.addEventListener('DOMContentLoaded', function() {
-    startQRStatusCheck();
-});
-</script>
+</section>

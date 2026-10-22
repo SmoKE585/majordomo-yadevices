@@ -1,0 +1,128 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-wand" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">Сценарии Яндекса</h1>
+            <p class="md-ui-hero__lede">Облачные сценарии станций, системные сценарии Cloud TTS и одноразовые таймеры.</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-wand" aria-hidden="true"></i>Всего: <strong>[#SCENARIOS_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-player-play" aria-hidden="true"></i>Активных: <strong>[#SCENARIOS_ACTIVE#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-cloud" aria-hidden="true"></i>Cloud TTS: <strong>[#SCENARIOS_CLOUD#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=search_scenarios" class="md-btn md-btn--primary"><i class="ti ti-refresh" aria-hidden="true"></i><span class="md-btn__label">Обновить</span></a>
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-speakerphone" aria-hidden="true"></i><span class="md-btn__label">Станции</span></a>
+        </div>
+    </header>
+
+    [#HINT#]
+
+    [#if SCENARIO_ERROR="auth"#]
+    <div class="md-empty">
+        <span class="md-empty__icon"><i class="ti ti-shield-lock" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Нужна авторизация</div>
+        <p class="md-empty__text">Сценарии хранятся в аккаунте Яндекса. Войдите, чтобы увидеть и удалить их.</p>
+        <div class="md-empty__actions"><a href="?view_mode=auth" class="md-btn md-btn--primary">Авторизоваться</a></div>
+    </div>
+    [#endif#]
+    [#if SCENARIO_ERROR="api"#]
+    <div class="md-alert md-alert--danger" role="alert">
+        <i class="ti ti-alert-circle" aria-hidden="true"></i>
+        <div><strong>Яндекс не вернул список сценариев.</strong> Проверьте авторизацию и повторите попытку. Подробности — в журнале модуля.</div>
+    </div>
+    [#endif#]
+
+    [#if RESULT_TIMER#]
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Таймеры</div>
+                <h2 class="md-card__title">Одноразовые сценарии</h2>
+                <p class="md-card__subtitle">Запустятся один раз в указанное время.</p>
+            </div>
+        </header>
+        <div class="md-card__body">
+            <div class="md-yv-timer-grid">
+                [#begin RESULT_TIMER#]
+                <div class="md-yv-timer">
+                    <span class="md-yv-timer__icon"><i class="ti ti-clock" aria-hidden="true"></i></span>
+                    <div>
+                        <div class="md-yv-timer__name">[#NAME#]</div>
+                        <div class="md-yv-timer__time">[#SCHEDULED_TIME_HUMAN#]</div>
+                    </div>
+                </div>
+                [#end RESULT_TIMER#]
+            </div>
+        </div>
+    </section>
+    [#endif#]
+
+    [#if RESULT#]
+    <div class="md-table-wrap">
+        <div class="md-table__toolbar">
+            <div class="md-table__search">
+                <i class="ti ti-search" aria-hidden="true"></i>
+                <input type="search" data-yv-scenario-search placeholder="Поиск по названию или устройствам" aria-label="Поиск сценариев" autocomplete="off">
+            </div>
+            <div class="md-table__meta">Сценариев: [#SCENARIOS_TOTAL#]</div>
+        </div>
+        <div class="md-table__scroll">
+            <table class="md-table" data-yv-scenario-table>
+                <thead>
+                    <tr>
+                        <th scope="col">Сценарий</th>
+                        <th scope="col">Статус</th>
+                        <th scope="col">Устройства</th>
+                        <th scope="col">ID</th>
+                        <th scope="col" class="text-end"><span class="md-visually-hidden">Действия</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    [#begin RESULT#]
+                    [#if CLOUDSCENARIO="1"#]
+                    <tr class="md-yv-scenario-cloud">
+                        <td colspan="5"><i class="ti ti-cloud" aria-hidden="true"></i>Системный сценарий Cloud TTS. Не удаляйте его, пока используете облачное озвучивание.</td>
+                    </tr>
+                    [#endif#]
+                    <tr data-yv-scenario data-search="[#NAME#] [#ALLOWDEVICES#]">
+                        <td>
+                            <div class="md-table__name">
+                                <span class="md-table__icon"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i></span>
+                                <div><strong>[#NAME#]</strong><small>[#if CLOUDSCENARIO="1"#]Cloud TTS[#else#]Пользовательский сценарий[#endif#]</small></div>
+                            </div>
+                        </td>
+                        <td><span class="md-badge md-badge--[#ACTIVE_TONE#]">[#IS_ACTIVE#]</span></td>
+                        <td>
+                            [#if ALLOWDEVICES!=""#]<span class="md-yv-scenario-devices">[#ALLOWDEVICES#]</span>[#else#]<span class="md-tree-empty">—</span>[#endif#]
+                        </td>
+                        <td><code class="md-yv-scenario-id">[#ID#]</code></td>
+                        <td>
+                            <div class="md-table__actions">
+                                <a href="?view_mode=search_scenarios&mode=runScenario&id=[#ID#]" class="md-icon-btn md-icon-btn--sm" data-bs-toggle="tooltip" data-bs-title="Запустить" aria-label="Запустить сценарий [#NAME#]"><i class="ti ti-player-play" aria-hidden="true"></i></a>
+                                <a href="?view_mode=search_scenarios&mode=delScenario&id=[#ID#]" class="md-icon-btn md-icon-btn--sm md-icon-btn--danger" data-bs-toggle="tooltip" data-bs-title="Удалить" aria-label="Удалить сценарий [#NAME#]" data-md-confirm="Удалить сценарий «[#NAME#]»? Это действие нельзя отменить."><i class="ti ti-trash" aria-hidden="true"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    [#end RESULT#]
+                </tbody>
+            </table>
+        </div>
+        <div class="md-table__empty" data-yv-scenario-empty hidden>
+            <div class="md-empty md-empty--compact">
+                <span class="md-empty__icon"><i class="ti ti-search" aria-hidden="true"></i></span>
+                <div class="md-empty__title">Ничего не найдено</div>
+                <p class="md-empty__text">Измените поисковый запрос.</p>
+            </div>
+        </div>
+    </div>
+    [#else RESULT#]
+    [#if SCENARIO_ERROR=""#]
+    <div class="md-empty">
+        <span class="md-empty__icon"><i class="ti ti-wand" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Сценариев пока нет</div>
+        <p class="md-empty__text">Создайте сценарий в приложении Яндекс Дом или включите облачное озвучивание — модуль создаст системный сценарий автоматически.</p>
+    </div>
+    [#endif#]
+    [#endif RESULT#]
+</div>

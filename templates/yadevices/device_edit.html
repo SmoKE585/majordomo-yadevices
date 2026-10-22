@@ -1,0 +1,147 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i>Я.Устройства · устройство</div>
+            <h1 class="md-ui-hero__title">[#TITLE#]</h1>
+            <p class="md-ui-hero__lede">[#TYPE_TITLE#] · навык: [#SKILL_NAME#][#if ROOM!=""#] · [#ROOM#][#endif#]</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-list-check" aria-hidden="true"></i>Умений: <strong>[#PROPERTIES_COUNT#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-link" aria-hidden="true"></i>Привязано: <strong>[#LINKED_COUNT#]</strong></span>
+                [#if IS_STATION="1"#]<span class="md-ui-hero__meta-item"><i class="ti ti-speakerphone" aria-hidden="true"></i><a href="?view_mode=edit_yastations&id=[#STATION_ID#]">Открыть станцию</a></span>[#endif#]
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=search_yadevices" class="md-btn md-btn--secondary"><i class="ti ti-arrow-left" aria-hidden="true"></i><span class="md-btn__label">К устройствам</span></a>
+            [#if AUTHORIZED="1"#]
+            <form action="?view_mode=refresh" method="post" class="md-yv-inline-form"><button type="submit" class="md-btn md-btn--ghost"><i class="ti ti-refresh" aria-hidden="true"></i><span class="md-btn__label">Обновить</span></button></form>
+            [#endif#]
+        </div>
+    </header>
+
+    [#if OK_MSG!=""#]
+    <div class="md-alert md-alert--success" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><div>[#OK_MSG#]</div></div>
+    [#endif#]
+    [#if ERR_MSG!=""#]
+    <div class="md-alert md-alert--danger" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><div>[#ERR_MSG#]</div></div>
+    [#endif#]
+
+    [#HINT#]
+
+    <div class="md-yv-form-grid">
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Основное</div>
+                    <h2 class="md-card__title">Название</h2>
+                    <p class="md-card__subtitle">Локальное имя отображается в MajorDoMo и не меняет имя в Яндексе.</p>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <form action="?view_mode=edit_yadevices&id=[#ID#]" method="post" class="md-yv-fields">
+                    <input type="hidden" name="view_mode" value="edit_yadevices">
+                    <input type="hidden" name="id" value="[#ID#]">
+                    <input type="hidden" name="mode" value="rename">
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-device-title">Название в MajorDoMo</label>
+                        <div class="md-field__control">
+                            <input class="md-input" id="yv-device-title" type="text" name="title" value="[#TITLE#]" maxlength="255">
+                        </div>
+                        <div class="md-field__hint">Оригинальное имя Яндекса: <strong>[#ORIGINAL_TITLE#]</strong></div>
+                    </div>
+                    <div class="md-yv-form-actions"><button type="submit" class="md-btn md-btn--primary"><i class="ti ti-device-floppy" aria-hidden="true"></i>Переименовать</button></div>
+                </form>
+            </div>
+        </section>
+
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Идентификаторы</div>
+                    <h2 class="md-card__title">Данные устройства</h2>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <dl class="md-yv-meta md-yv-meta--ids">
+                    <div><dt>ID</dt><dd><code>[#ID#]</code></dd></div>
+                    <div><dt>IoT ID</dt><dd><code>[#IOT_ID#]</code></dd></div>
+                    <div><dt>Тип</dt><dd><code>[#DEVICE_TYPE#]</code></dd></div>
+                    <div><dt>Навык</dt><dd>[#SKILL_NAME#][#if SKILL_ID!=""#] <code>[#SKILL_ID#]</code>[#endif#]</dd></div>
+                    <div><dt>Дом</dt><dd>[#HOUSE#]</dd></div>
+                    <div><dt>Комната</dt><dd>[#ROOM#]</dd></div>
+                    <div><dt>Обновлено</dt><dd>[#UPDATED#]</dd></div>
+                </dl>
+            </div>
+        </section>
+    </div>
+
+    [#if PROPERTIES_COUNT="0"#]
+    <div class="md-empty">
+        <span class="md-empty__icon"><i class="ti ti-list-check" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Умения не загружены</div>
+        <p class="md-empty__text">Обновите список устройств, чтобы Яндекс вернул capabilities и properties.</p>
+        <div class="md-empty__actions"><a href="?view_mode=refresh" class="md-btn md-btn--primary">Обновить</a></div>
+    </div>
+    [#else#]
+    <section class="md-card md-yv-capabilities-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Умения и связи</div>
+                <h2 class="md-card__title">Свойства объектов</h2>
+                <p class="md-card__subtitle">Для каждого умения выберите объект и свойство. Метод необязателен: он получает команду вместо записи в свойство.</p>
+            </div>
+        </header>
+        <div class="md-card__body md-card__body--flush">
+            <form action="?view_mode=edit_yadevices&id=[#ID#]" method="post">
+                <input type="hidden" name="view_mode" value="edit_yadevices">
+                <input type="hidden" name="id" value="[#ID#]">
+                <input type="hidden" name="mode" value="update">
+                <div class="md-yv-cap-list">
+                [#begin PROPERTIES#]
+                [#if HIDE="0"#]
+                    <div class="md-yv-cap" data-yv-capability data-row-id="[#ID#]">
+                        <div class="md-yv-cap__head">
+                            <div class="md-yv-cap__title">
+                                <span class="md-badge md-badge--outline">[#GROUP#]</span>
+                                <strong>[#LABEL#]</strong>
+                                <code>[#TITLE_RAW#]</code>
+                            </div>
+                            <div class="md-yv-cap__side">
+                                <span class="md-yv-cap__value">
+                                    [#if VALUE!=""#]<span>Значение:</span> <code>[#VALUE#]</code>[#else#]<span class="md-tree-empty">Значение не задано</span>[#endif#]
+                                </span>
+                                [#if LINKED="1"#]<span class="md-badge md-badge--success"><i class="ti ti-link" aria-hidden="true"></i>привязано</span>[#else#]<span class="md-badge md-badge--neutral"><i class="ti ti-unlink" aria-hidden="true"></i>не привязано</span>[#endif#]
+                            </div>
+                        </div>
+                        [#if ALLOWPARAMS!="" || READONLY="1"#]
+                        <div class="md-yv-cap__notes">
+                            [#if ALLOWPARAMS!=""#]<span>Доступно: [#ALLOWPARAMS#]</span>[#endif#]
+                            [#if READONLY="1"#]<span><i class="ti ti-lock" aria-hidden="true"></i>Только чтение</span>[#endif#]
+                        </div>
+                        [#endif#]
+                        <div class="md-yv-link-fields">
+                            <input class="md-input" type="text" id="linked_object<#PROPERTIES.ID#>" name="linked_object[[#ID#]]" value="[#LINKED_OBJECT#]" placeholder="Объект" autocomplete="off">
+                            <input class="md-input" type="text" id="linked_property<#PROPERTIES.ID#>" name="linked_property[[#ID#]]" value="[#LINKED_PROPERTY#]" placeholder="Свойство" autocomplete="off">
+                            <input class="md-input" type="text" id="linked_method<#PROPERTIES.ID#>" name="linked_method[[#ID#]]" value="[#LINKED_METHOD#]" placeholder="Метод (необязательно)" autocomplete="off">
+                        </div>
+                        <div class="md-yv-link-picker">
+                            [#module name="linkedobject" object_field="linked_object<#PROPERTIES.ID#>" property_field="linked_property<#PROPERTIES.ID#>" method_field="linked_method<#PROPERTIES.ID#>" uniq="cap<#PROPERTIES.ID#>" width="100%"#]
+                        </div>
+                        [#if UPDATED!=""#]<div class="md-yv-cap__date">Обновлено: [#UPDATED#]</div>[#endif#]
+                    </div>
+                [#endif HIDE#]
+                [#end PROPERTIES#]
+                </div>
+                <div class="md-yv-cap-actions">
+                    <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-device-floppy" aria-hidden="true"></i>Сохранить связи</button>
+                    <a href="?view_mode=search_yadevices" class="md-btn md-btn--secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </section>
+    [#endif#]
+
+    <div class="md-yv-danger-zone">
+        <div><strong>Удалить устройство</strong><span>Запись и все её умения исчезнут. Связи со свойствами объектов будут сняты.</span></div>
+        <a href="?view_mode=delete_yadevice&id=[#ID#]" class="md-btn md-btn--danger" data-md-confirm="Удалить устройство «[#TITLE#]»?">Удалить</a>
+    </div>
+</div>

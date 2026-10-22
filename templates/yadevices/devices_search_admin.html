@@ -1,0 +1,176 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-devices" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">Устройства Яндекса</h1>
+            <p class="md-ui-hero__lede">Все устройства аккаунта: умный дом, навыки и станции. Свяжите умения со свойствами объектов MajorDoMo.</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-devices" aria-hidden="true"></i>Устройств: <strong>[#DEVICES_ALL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-toggle-right" aria-hidden="true"></i>Включено: <strong>[#DEVICES_ON#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-link" aria-hidden="true"></i>Со связями: <strong>[#DEVICES_LINKED#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            [#if AUTHORIZED="1"#]
+            <form action="?view_mode=refresh" method="post" class="md-yv-inline-form">
+                <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-refresh" aria-hidden="true"></i><span class="md-btn__label">Обновить</span></button>
+            </form>
+            [#endif#]
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-speakerphone" aria-hidden="true"></i><span class="md-btn__label">Станции</span></a>
+            <a href="?view_mode=settings" class="md-btn md-btn--ghost"><i class="ti ti-settings" aria-hidden="true"></i><span class="md-btn__label">Настройки</span></a>
+        </div>
+    </header>
+
+    [#HINT#]
+
+    <div class="md-ui-kpi-grid">
+        <div class="md-kpi md-kpi--primary">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-devices" aria-hidden="true"></i></span><span class="md-kpi__label">Всего</span></div>
+            <div class="md-kpi__value">[#DEVICES_ALL#]</div>
+            <div class="md-kpi__meta">Устройств в аккаунте</div>
+        </div>
+        <div class="md-kpi md-kpi--success">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-toggle-right" aria-hidden="true"></i></span><span class="md-kpi__label">Включено</span></div>
+            <div class="md-kpi__value">[#DEVICES_ON#]</div>
+            <div class="md-kpi__meta">По состоянию on_off</div>
+        </div>
+        <div class="md-kpi md-kpi--info">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-link" aria-hidden="true"></i></span><span class="md-kpi__label">Со связями</span></div>
+            <div class="md-kpi__value">[#DEVICES_LINKED#]</div>
+            <div class="md-kpi__meta">Хотя бы одно умение привязано</div>
+        </div>
+        <div class="md-kpi md-kpi--warning">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-filter" aria-hidden="true"></i></span><span class="md-kpi__label">Скрыто навыков</span></div>
+            <div class="md-kpi__value">[#HIDDEN_SKILL_COUNT#]</div>
+            <div class="md-kpi__meta">Не показываются в списке</div>
+        </div>
+    </div>
+
+    [#inc tabs.html#]
+
+    <details class="md-yv-filter" [#if HIDDEN_SKILL_COUNT!="0"#]open[#endif#]>
+        <summary class="md-yv-filter__summary">
+            <span><i class="ti ti-filter" aria-hidden="true"></i>Фильтр по навыкам</span>
+            <span class="md-badge md-badge--neutral">[#SKILLS_TOTAL#]</span>
+        </summary>
+        <form action="?view_mode=search_yadevices" method="post" class="md-yv-filter__body">
+            <input type="hidden" name="view_mode" value="search_yadevices">
+            <input type="hidden" name="mode" value="save_skill_filter">
+            <div class="md-yv-skill-list">
+                [#begin SKILLS#]
+                <label class="md-check">
+                    <input class="md-check__input" type="checkbox" data-md-raw-checkbox name="visible_skills[]" value="[#ID#]" [#if CHECKED="1"#]checked[#endif#]>
+                    <span class="md-check__box" aria-hidden="true"><i class="ti ti-check" aria-hidden="true"></i></span>
+                    <span class="md-check__text"><span class="md-check__label">[#TITLE#]</span><span class="md-check__desc">устройств: [#COUNT#]</span></span>
+                </label>
+                [#end SKILLS#]
+            </div>
+            <div class="md-yv-filter__actions">
+                <button type="submit" class="md-btn md-btn--primary md-btn--sm"><i class="ti ti-check" aria-hidden="true"></i>Применить</button>
+                <button type="button" class="md-btn md-btn--secondary md-btn--sm" data-yv-skills-all><i class="ti ti-checks" aria-hidden="true"></i>Показать все</button>
+            </div>
+        </form>
+    </details>
+
+    [#if RESULT#]
+    <div class="md-table-wrap" data-md-table data-md-table-page-size="25" data-md-table-unit="устройств" data-md-table-unit-one="устройство" data-md-table-unit-few="устройства" data-md-table-unit-many="устройств">
+        <div class="md-table__toolbar">
+            <div class="md-table__search">
+                <i class="ti ti-search" aria-hidden="true"></i>
+                <input type="search" data-md-table-search placeholder="Поиск по названию, типу, комнате или навыку" aria-label="Поиск устройств" autocomplete="off">
+            </div>
+            <div class="md-table__meta" data-md-table-meta>Устройств: [#DEVICES_TOTAL#]</div>
+        </div>
+
+        <div class="md-table__scroll">
+            <table class="md-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><button type="button" class="md-table__sort" data-md-table-sort="title">Устройство <i class="ti ti-arrows-up-down" aria-hidden="true"></i></button></th>
+                        <th scope="col">Тип</th>
+                        <th scope="col">Навык</th>
+                        <th scope="col">Комната</th>
+                        <th scope="col">Связи</th>
+                        <th scope="col">Состояние</th>
+                        <th scope="col" class="text-end"><span class="md-visually-hidden">Действия</span></th>
+                    </tr>
+                </thead>
+                <tbody data-md-table-body>
+                    [#begin RESULT#]
+                    <tr data-md-row data-row-id="[#ID#]" data-sort-title="[#TITLE#]" data-search="[#SEARCH#]">
+                        <td>
+                            <div class="md-table__name md-yv-device-cell">
+                                <span class="md-table__icon"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i></span>
+                                <div class="md-yv-device-cell__body">
+                                    <a href="[#EDIT_URL#]"><strong>[#TITLE#]</strong></a>
+                                    [#if ROOM!="" || HOUSE!=""#]<small>[#HOUSE#][#if HOUSE!="" && ROOM!=""#] · [#endif#][#ROOM#]</small>[#endif#]
+                                    <span class="md-yv-device-cell__id"><code>[#IOT_ID#]</code></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="md-badge md-badge--outline"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i>[#TYPE_TITLE#]</span></td>
+                        <td><span class="md-yv-skill">[#SKILL_NAME#]</span></td>
+                        <td>
+                            [#if ROOM!=""#]<span class="md-yv-room"><i class="ti ti-map-pin" aria-hidden="true"></i>[#ROOM#]</span>[#else#]<span class="md-tree-empty">—</span>[#endif#]
+                        </td>
+                        <td>
+                            [#if HAS_LINKS="1"#]<span class="md-badge md-badge--success"><i class="ti ti-link" aria-hidden="true"></i>[#LINKED_COUNT#] / [#CAPS_COUNT#]</span>[#else#]<span class="md-badge md-badge--neutral"><i class="ti ti-unlink" aria-hidden="true"></i>0 / [#CAPS_COUNT#]</span>[#endif#]
+                        </td>
+                        <td>
+                            [#if IS_STATION="1"#]
+                                <span class="md-badge md-badge--info"><i class="ti ti-speakerphone" aria-hidden="true"></i>станция</span>
+                            [#else#]
+                                [#if CAN_TOGGLE="1"#]
+                                <form action="?view_mode=search_yadevices" method="post" class="md-yv-switch-form" data-yv-toggle-form>
+                                    <input type="hidden" name="view_mode" value="search_yadevices">
+                                    <input type="hidden" name="mode" value="switch">
+                                    <input type="hidden" name="iot_id" value="[#IOT_ID#]">
+                                    <input type="hidden" name="value" value="[#VALUE#]">
+                                    <label class="md-switch md-switch--compact">
+                                        <input class="md-switch__input" type="checkbox" data-md-raw-checkbox data-yv-device-toggle [#if VALUE="1"#]checked[#endif#] aria-label="Переключить устройство [#TITLE#]">
+                                        <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+                                    </label>
+                                </form>
+                                [#else#]
+                                    [#if STATE_TEXT!=""#]<span class="md-badge md-badge--outline"><i class="ti ti-activity" aria-hidden="true"></i>[#STATE_TEXT#]</span>[#else#]<span class="md-tree-empty">—</span>[#endif#]
+                                [#endif#]
+                            [#endif#]
+                        </td>
+                        <td><span class="md-yv-date">[#UPDATED#]</span></td>
+                        <td>
+                            <div class="md-table__actions">
+                                <a href="[#EDIT_URL#]" class="md-icon-btn md-icon-btn--sm" data-bs-toggle="tooltip" data-bs-title="Редактировать" aria-label="Редактировать устройство [#TITLE#]"><i class="ti ti-pencil" aria-hidden="true"></i></a>
+                                <a href="?view_mode=delete_yadevice&id=[#ID#]" class="md-icon-btn md-icon-btn--sm md-icon-btn--danger" data-bs-toggle="tooltip" data-bs-title="Удалить" aria-label="Удалить устройство [#TITLE#]" data-md-confirm="Удалить устройство [#TITLE#]? Связи со свойствами объектов будут сняты."><i class="ti ti-trash" aria-hidden="true"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    [#end RESULT#]
+                </tbody>
+            </table>
+        </div>
+
+        <div class="md-table__empty" data-md-table-empty>
+            <div class="md-empty md-empty--compact">
+                <span class="md-empty__icon"><i class="ti ti-search" aria-hidden="true"></i></span>
+                <div class="md-empty__title">Ничего не найдено</div>
+                <p class="md-empty__text">Измените запрос или включите скрытые навыки.</p>
+            </div>
+        </div>
+
+        <div class="md-table__footer">
+            <span data-md-table-count>Показано [#DEVICES_TOTAL#] из [#DEVICES_TOTAL#]</span>
+            <ul class="pagination md-pagination mb-0" data-md-table-pagination></ul>
+        </div>
+    </div>
+    [#else RESULT#]
+    <div class="md-empty">
+        <span class="md-empty__icon"><i class="ti ti-devices" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Устройств пока нет</div>
+        <p class="md-empty__text">Авторизуйтесь и обновите список. Устройства появятся здесь вместе с умениями и связями.</p>
+        <div class="md-empty__actions">
+            <a href="?view_mode=auth" class="md-btn md-btn--primary">Авторизоваться</a>
+            <a href="?view_mode=" class="md-btn md-btn--secondary">К станциям</a>
+        </div>
+    </div>
+    [#endif RESULT#]
+</div>

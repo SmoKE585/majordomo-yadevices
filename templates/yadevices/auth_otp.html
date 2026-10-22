@@ -1,26 +1,35 @@
-<p>
-    Авторизация происходит с помощью одноразового пароля, доступного в приложении Я.Ключ. Пароль действует 30 секунд.
-</p>
-
-<form action="?" method="post" enctype="multipart/form-data" class="ya-form-loading ya-card ya-card-soft">
-    [#if TRACK_ID!=""#]
-    <div class="from-group">
-        <label>Пароль:</label>
-        <input name="otp" type="text" class="form-control">
+<section class="md-card md-yv-auth-card">
+    <header class="md-card__head">
+        <div class="md-card__titles">
+            <div class="md-card__eyebrow">Я.Ключ</div>
+            <h2 class="md-card__title">Одноразовый пароль</h2>
+            <p class="md-card__subtitle">Пароль действует 30 секунд. Способ оставлен для совместимости; для новых установок используйте QR-код.</p>
+        </div>
+        <div class="md-card__actions"><a href="?view_mode=auth" class="md-btn md-btn--ghost md-btn--sm"><i class="ti ti-arrow-left" aria-hidden="true"></i>Назад</a></div>
+    </header>
+    <div class="md-card__body">
+        <form action="?view_mode=auth&type=otp" method="post" class="md-yv-auth-form">
+            [#if TRACK_ID!=""#]
+            <div class="md-field">
+                <label class="md-field__label" for="yv-otp">Пароль из Я.Ключа</label>
+                <div class="md-field__control">
+                    <input class="md-input" id="yv-otp" type="text" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required autofocus>
+                </div>
+            </div>
+            <input type="hidden" name="track_id" value="[#TRACK_ID#]">
+            <input type="hidden" name="csrf_token" value="[#CSRF_TOKEN#]">
+            [#else#]
+            <div class="md-field">
+                <label class="md-field__label" for="yv-username">Логин Яндекса</label>
+                <div class="md-field__control">
+                    <input class="md-input" id="yv-username" type="text" name="username" autocomplete="username" required autofocus>
+                </div>
+            </div>
+            [#endif#]
+            <div class="md-yv-auth-form__actions">
+                <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-arrow-right" aria-hidden="true"></i>Продолжить</button>
+                <a href="?view_mode=auth" class="md-btn md-btn--secondary">Отмена</a>
+            </div>
+        </form>
     </div>
-    <input type="hidden" name="track_id" value="<#TRACK_ID#>">
-    [#else TRACK_ID#]
-    <div class="from-group">
-        <label>Имя пользователя:</label>
-        <input name="username" type="text" class="form-control">
-    </div>
-    [#endif TRACK_ID#]
-    &nbsp;
-    <div class="form-group">
-        <button type="submit" id="Cookie_upload" name="submit" class="btn btn-success"><span class="ya-loader"></span>Продолжить</button>
-        <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
-    </div>
-    <input type="hidden" name="csrf_token" value="<#CSRF_TOKEN#>">
-    <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
-    <input type="hidden" name="type" value="<#TYPE#>">
-</form>
+</section>

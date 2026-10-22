@@ -1,122 +1,62 @@
-<style>
-.ya-auth-hero {
-    position: relative;
-    overflow: hidden;
-    margin: 0 0 18px;
-    padding: 22px;
-    border-radius: 10px;
-    color: #fff;
-    background: linear-gradient(135deg, #111827 0%, #0f766e 58%, #f59e0b 130%);
-}
-.ya-auth-hero:after {
-    content: "";
-    position: absolute;
-    right: -60px;
-    top: -80px;
-    width: 230px;
-    height: 230px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.16);
-}
-.ya-auth-state {font-size: 15px;margin-top: 8px;}
-.ya-auth-grid {display: flex;flex-wrap: wrap;margin: 0 -8px 18px;}
-.ya-auth-grid > div {padding: 8px;}
-.ya-card {
-    border: 1px solid #dde4ea;
-    border-radius: 10px;
-    padding: 16px;
-    background: #fff;
-    min-height: 145px;
-    box-shadow: 0 8px 22px rgba(15,23,42,.07);
-}
-.ya-card h3 {margin-top: 0;font-size: 18px;}
-.ya-card-soft {background: linear-gradient(180deg, #ffffff, #f8fafc);}
-.ya-badge {display: inline-block;padding: 3px 8px;border-radius: 999px;font-size: 12px;font-weight: 600;}
-.ya-badge-ok {background: #dcfce7;color: #166534;}
-.ya-badge-warn {background: #fef3c7;color: #92400e;}
-.ya-loader {
-    display: none;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,.55);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: yaSpin .8s linear infinite;
-    vertical-align: -3px;
-    margin-right: 6px;
-}
-button.loading .ya-loader, .btn.loading .ya-loader {display: inline-block;}
-@keyframes yaSpin {to {transform: rotate(360deg);}}
-@media (max-width: 767px) {.ya-auth-hero {padding: 16px}.ya-card {min-height: 0}}
-</style>
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-shield-lock" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">Авторизация Яндекса</h1>
+            <p class="md-ui-hero__lede">Вход в аккаунт нужен для списка станций, облачного TTS, сценариев и будильников.</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item">
+                    [#if AUTHORIZED_OK="1"#]<i class="ti ti-shield-check" aria-hidden="true"></i>Статус: <strong>авторизован</strong>[#else#]<i class="ti ti-shield-lock" aria-hidden="true"></i>Статус: <strong>не авторизован</strong>[#endif#]
+                </span>
+                [#if AUTH_HAS_COOKIE="1"#]<span class="md-ui-hero__meta-item"><i class="ti ti-file-check" aria-hidden="true"></i>cookie: <strong>есть</strong></span>[#endif#]
+                [#if AUTH_X_TOKEN="1"#]<span class="md-ui-hero__meta-item"><i class="ti ti-key" aria-hidden="true"></i>x-token: <strong>сохранён</strong></span>[#endif#]
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-arrow-left" aria-hidden="true"></i><span class="md-btn__label">К станциям</span></a>
+            [#if AUTHORIZED_OK="1"#]
+            <form action="?view_mode=auth&type=check" method="post" class="md-yv-inline-form">
+                <button type="submit" class="md-btn md-btn--secondary"><i class="ti ti-refresh" aria-hidden="true"></i><span class="md-btn__label">Проверить</span></button>
+            </form>
+            <form action="?view_mode=auth&type=reset" method="post" class="md-yv-inline-form" data-md-confirm="Удалить сохранённые cookie и токены?">
+                <button type="submit" class="md-btn md-btn--danger"><i class="ti ti-logout" aria-hidden="true"></i><span class="md-btn__label">Выйти</span></button>
+            </form>
+            [#endif#]
+        </div>
+    </header>
 
-<div class="ya-auth-hero">
-    <h2 style="margin-top:0;">Авторизация Яндекс</h2>
-    <div class="ya-auth-state">
-        Состояние:
-        [#if AUTHORIZED_OK="1"#]
-            <span class="ya-badge ya-badge-ok">Авторизовано</span>
-            [#if X_TOKEN="1"#]<span class="ya-badge ya-badge-ok">cookie auto-refresh</span>[#endif#]
-            <a href="?view_mode=<#VIEW_MODE#>&type=reset" class="btn btn-xs btn-default" onclick="return confirm('Данные авторизации будут удалены. Продолжить?');">Удалить авторизацию</a>
-        [#else#]
-            <span class="ya-badge ya-badge-warn">Не авторизовано</span>
-        [#endif#]
+    [#if ERR_MSG!=""#]
+    <div class="md-alert md-alert--danger" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><div>[#ERR_MSG#]</div></div>
+    [#endif#]
+    [#if OK_MSG!=""#]
+    <div class="md-alert md-alert--success" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><div>[#OK_MSG#]</div></div>
+    [#endif#]
+
+    [#HINT#]
+
+    [#if TYPE=""#]
+    <div class="md-yv-auth-grid">
+        [#begin AUTH_METHODS#]
+        <a class="md-yv-auth-method" href="[#URL#]">
+            <span class="md-yv-auth-method__icon"><i class="ti ti-[#ICON#]" aria-hidden="true"></i></span>
+            <span class="md-yv-auth-method__body">
+                <span class="md-yv-auth-method__title">[#LABEL#]</span>
+                <span class="md-yv-auth-method__desc">[#DESCRIPTION#]</span>
+            </span>
+            <i class="ti ti-arrow-right md-yv-auth-method__arrow" aria-hidden="true"></i>
+        </a>
+        [#end AUTH_METHODS#]
     </div>
+
+    <div class="md-alert md-alert--info">
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
+        <div>Прямой логин и пароль не используются. Если вы переносите авторизацию из Home Assistant, подойдёт x-token. Для локального режима после входа сформируйте токен устройства в карточке станции.</div>
+    </div>
+    [#endif TYPE#]
+
+    [#if TYPE="qr"#][#inc auth_qr.html#][#endif TYPE#]
+    [#if TYPE="browser"#][#inc auth_browser.html#][#endif TYPE#]
+    [#if TYPE="cookie"#][#inc auth_cookie.html#][#endif TYPE#]
+    [#if TYPE="otp"#][#inc auth_otp.html#][#endif TYPE#]
+    [#if TYPE="token"#][#inc auth_token.html#][#endif TYPE#]
 </div>
-
-[#if ERR_MSG!=""#]<div class="alert alert-danger">[#ERR_MSG#]</div>[#endif ERR_MSG#]
-[#if OK_MSG!=""#]<div class="alert alert-success">[#OK_MSG#]</div>[#endif OK_MSG#]
-
-[#if TYPE=""#]
-<div class="ya-auth-grid">
-    <div class="col-md-3 col-sm-6 col-xs-12">
-        <div class="ya-card">
-            <h3>QR-код</h3>
-            <p class="text-muted">Рекомендуемый способ. Сканирование в приложении Яндекс.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=qr" class="btn btn-success btn-block"><i class="glyphicon glyphicon-qrcode"></i> Открыть QR</a>
-        </div>
-    </div>
-    <div class="col-md-3 col-sm-6 col-xs-12">
-        <div class="ya-card">
-            <h3>Браузер</h3>
-            <p class="text-muted">Модуль создаст ссылку входа. Откройте её в браузере, где уже есть аккаунт Яндекса.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=browser" class="btn btn-primary btn-block"><i class="glyphicon glyphicon-new-window"></i> Открыть вход</a>
-        </div>
-    </div>
-    <div class="col-md-3 col-sm-6 col-xs-12">
-        <div class="ya-card">
-            <h3>Cookie</h3>
-            <p class="text-muted">Поддерживает Netscape-файл, JSON cookies или raw cookie string.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=cookie" class="btn btn-default btn-block"><i class="glyphicon glyphicon-upload"></i> Загрузить</a>
-        </div>
-    </div>
-    <div class="col-md-3 col-sm-6 col-xs-12">
-        <div class="ya-card">
-            <h3>OTP</h3>
-            <p class="text-muted">Одноразовый пароль из Я.Ключ. Оставлено для совместимости.</p>
-            <a href="?view_mode=<#VIEW_MODE#>&type=otp" class="btn btn-default btn-block"><i class="glyphicon glyphicon-time"></i> Войти</a>
-        </div>
-    </div>
-</div>
-<div class="alert alert-info">
-    Прямой login/password в актуальном HASS-flow фактически не используется: интерактивные варианты там QR, cookies и token. Поэтому здесь основной безопасный путь такой же.
-</div>
-[#endif TYPE#]
-
-[#if TYPE="otp"#][#inc auth_otp.html#][#endif TYPE#]
-[#if TYPE="cookie"#][#inc auth_cookie.html#][#endif TYPE#]
-[#if TYPE="token"#][#inc auth_token.html#][#endif TYPE#]
-[#if TYPE="qr"#][#inc auth_qr.html#][#endif TYPE#]
-[#if TYPE="browser"#][#inc auth_browser.html#][#endif TYPE#]
-
-<script>
-$(function() {
-    $('.ya-form-loading').on('submit', function() {
-        var $btn = $(this).find('button[type=submit], input[type=submit]').first();
-        if ($btn.length) {
-            $btn.addClass('loading').prop('disabled', true);
-            if ($btn.is('input')) $btn.val('Обработка...');
-        }
-    });
-});
-</script>

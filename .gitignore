@@ -8,3 +8,5 @@ cms/cached/
 # QR images are generated at runtime
 modules/yadevices/phpqrcode/cache/*
 !modules/yadevices/phpqrcode/cache/.gitkeep
+
+docs/ui-redesign/

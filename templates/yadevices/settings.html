@@ -1,0 +1,189 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-settings" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">Настройки модуля</h1>
+            <p class="md-ui-hero__lede">Интервал опроса, мониторинг ошибок, notify-группы и состояние фонового цикла.</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-refresh" aria-hidden="true"></i>Опрос: <strong>[#RELOAD_LABEL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-speakerphone" aria-hidden="true"></i>Станций: <strong>[#STATIONS_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-devices" aria-hidden="true"></i>Устройств: <strong>[#DEVICES_TOTAL#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-arrow-left" aria-hidden="true"></i><span class="md-btn__label">К станциям</span></a>
+            <a href="?view_mode=about" class="md-btn md-btn--ghost"><i class="ti ti-info-circle" aria-hidden="true"></i><span class="md-btn__label">О модуле</span></a>
+        </div>
+    </header>
+
+    [#HINT#]
+
+    <form action="?view_mode=update_settings" method="post" class="md-yv-settings-form" autocomplete="off">
+        <input type="hidden" name="view_mode" value="update_settings">
+
+        <div class="md-yv-form-grid">
+            <section class="md-card">
+                <header class="md-card__head">
+                    <div class="md-card__titles">
+                        <div class="md-card__eyebrow">Опрос</div>
+                        <h2 class="md-card__title">Состояние станций</h2>
+                        <p class="md-card__subtitle">Фоновый цикл обновляет онлайн-статус и громкость. Слишком частый опрос повышает риск ограничений Яндекса.</p>
+                    </div>
+                </header>
+                <div class="md-card__body">
+                    <div class="md-yv-fields">
+                        <div class="md-field">
+                            <label class="md-field__label" for="yv-reload">Интервал опроса</label>
+                            <div class="md-field__control">
+                                <select class="md-select" id="yv-reload" name="cycleIsOnTime">
+                                    [#begin RELOAD_OPTIONS#]
+                                    <option value="[#VALUE#]" [#if SELECTED="1"#]selected[#endif#]>[#LABEL#]</option>
+                                    [#end RELOAD_OPTIONS#]
+                                </select>
+                            </div>
+                            <div class="md-field__hint">Рекомендуется 1–3 минуты для повседневной работы.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="md-card">
+                <header class="md-card__head">
+                    <div class="md-card__titles">
+                        <div class="md-card__eyebrow">Диагностика</div>
+                        <h2 class="md-card__title">Мониторинг ошибок</h2>
+                        <p class="md-card__subtitle">Куда отправлять технические ошибки модуля.</p>
+                    </div>
+                </header>
+                <div class="md-card__body">
+                    <div class="md-yv-fields">
+                        <label class="md-switch">
+                            <input class="md-switch__input" type="checkbox" data-md-raw-checkbox name="errorMonitor" value="1" [#if ERRORMONITOR="1"#]checked[#endif#] data-yv-monitor-toggle>
+                            <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+                            <span class="md-switch__text">
+                                <span class="md-switch__label">Включить мониторинг</span>
+                                <span class="md-switch__desc">Критические ошибки попадут в выбранный приёмник.</span>
+                            </span>
+                        </label>
+                        <div class="md-field" data-yv-monitor-fields [#if ERRORMONITOR!="1"#]hidden[#endif#]>
+                            <label class="md-field__label" for="yv-monitor-type">Приёмник ошибок</label>
+                            <div class="md-field__control">
+                                <select class="md-select" id="yv-monitor-type" name="errorMonitorType">
+                                    <option value="1" [#if ERRORMONITORTYPE="1"#]selected[#endif#]>Модуль «Ошибки системы»</option>
+                                    <option value="2" [#if ERRORMONITORTYPE!="1"#]selected[#endif#]>DebMes</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="md-card md-yv-cycle-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Цикл</div>
+                    <h2 class="md-card__title">Фоновый цикл модуля</h2>
+                    <p class="md-card__subtitle">Управление запуском и остановкой цикла `yadevices`.</p>
+                </div>
+                <div class="md-card__actions">
+                    <span class="md-badge md-badge--[#CYCLE_TONE#]">
+                        <i class="ti ti-[#CYCLE_ICON#]" aria-hidden="true"></i>
+                        [#CYCLE_LABEL#]
+                    </span>
+                </div>
+            </header>
+            <div class="md-card__body md-yv-cycle-body">
+                <dl class="md-yv-meta">
+                    <div><dt>Последний запуск</dt><dd>[#CYCLE_LAST_RUN#]</dd></div>
+                    <div><dt>Интервал</dt><dd>[#RELOAD_LABEL#]</dd></div>
+                    <div><dt>Очередь команд</dt><dd>через `cycle_yadevices`</dd></div>
+                </dl>
+                <div class="md-yv-cycle-control">
+                    [#module name="xray" action="service" cycle="yadevices"#]
+                </div>
+            </div>
+        </section>
+
+        <section class="md-card md-yv-notify">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">API</div>
+                    <h2 class="md-card__title">Notify-группы</h2>
+                    <p class="md-card__subtitle">Отправляйте текст сразу на несколько колонок через API.</p>
+                </div>
+                <div class="md-card__actions">
+                    <button type="button" class="md-btn md-btn--secondary md-btn--sm" data-yv-add-group>
+                        <i class="ti ti-plus" aria-hidden="true"></i><span class="md-btn__label">Добавить группу</span>
+                    </button>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <div class="md-yv-notify-groups" data-yv-notify-groups>
+                    [#begin NOTIFY_GROUPS#]
+                    <div class="md-yv-notify-group" data-yv-notify-group>
+                        <div class="md-yv-notify-group__head">
+                            <div class="md-field">
+                                <label class="md-field__label">Название группы</label>
+                                <div class="md-field__control">
+                                    <input class="md-input" type="text" name="notify_group_names[[#INDEX#]]" value="[#TITLE#]" placeholder="all" maxlength="100">
+                                </div>
+                            </div>
+                            <div class="md-yv-notify-group__actions">
+                                <button type="button" class="md-btn md-btn--ghost md-btn--sm" data-yv-group-all>Все</button>
+                                <button type="button" class="md-btn md-btn--ghost md-btn--sm" data-yv-group-none>Очистить</button>
+                                <button type="button" class="md-icon-btn md-icon-btn--sm md-icon-btn--danger" data-yv-group-remove aria-label="Удалить группу"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div class="md-yv-station-chips">
+                            [#begin STATIONS#]
+                            <label class="md-check md-yv-station-chip">
+                                <input class="md-check__input" type="checkbox" data-md-raw-checkbox name="notify_group_stations[[#GROUP_INDEX#]][]" value="[#ID#]" [#if CHECKED="1"#]checked[#endif#]>
+                                <span class="md-check__box" aria-hidden="true"><i class="ti ti-check" aria-hidden="true"></i></span>
+                                <span class="md-check__text"><span class="md-check__label">[#TITLE#]</span></span>
+                            </label>
+                            [#end STATIONS#]
+                        </div>
+                    </div>
+                    [#end NOTIFY_GROUPS#]
+                </div>
+
+                <div class="md-yv-api-hint">
+                    <div class="md-yv-api-hint__title"><i class="ti ti-code" aria-hidden="true"></i>Вызов из сценария</div>
+                    <pre class="md-yv-code">callAPI('/api/module/yadevices', 'GET', array('group' =&gt; 'all', 'command' =&gt; 'text', 'data' =&gt; 'Текст'));</pre>
+                    <p>Старый параметр <code>notify</code> тоже поддерживается.</p>
+                </div>
+            </div>
+            <footer class="md-card__footer">
+                <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-check" aria-hidden="true"></i><span class="md-btn__label">Сохранить настройки</span></button>
+            </footer>
+        </section>
+    </form>
+</div>
+
+<template id="yvNotifyGroupTemplate">
+    <div class="md-yv-notify-group" data-yv-notify-group>
+        <div class="md-yv-notify-group__head">
+            <div class="md-field">
+                <label class="md-field__label">Название группы</label>
+                <div class="md-field__control">
+                    <input class="md-input" type="text" name="notify_group_names[__INDEX__]" value="" placeholder="all" maxlength="100">
+                </div>
+            </div>
+            <div class="md-yv-notify-group__actions">
+                <button type="button" class="md-btn md-btn--ghost md-btn--sm" data-yv-group-all>Все</button>
+                <button type="button" class="md-btn md-btn--ghost md-btn--sm" data-yv-group-none>Очистить</button>
+                <button type="button" class="md-icon-btn md-icon-btn--sm md-icon-btn--danger" data-yv-group-remove aria-label="Удалить группу"><i class="ti ti-trash" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div class="md-yv-station-chips">
+            [#begin NOTIFY_STATIONS#]
+            <label class="md-check md-yv-station-chip">
+                <input class="md-check__input" type="checkbox" data-md-raw-checkbox name="notify_group_stations[__INDEX__][]" value="[#ID#]">
+                <span class="md-check__box" aria-hidden="true"><i class="ti ti-check" aria-hidden="true"></i></span>
+                <span class="md-check__text"><span class="md-check__label">[#TITLE#]</span></span>
+            </label>
+            [#end NOTIFY_STATIONS#]
+        </div>
+    </div>
+</template>

@@ -1,0 +1,90 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-speakerphone" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">О модуле</h1>
+            <p class="md-ui-hero__lede">Интеграция Яндекс Станций и устройств умного дома с MajorDoMo. Версия [#MODULE_VERSION#].</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-speakerphone" aria-hidden="true"></i>Станций: <strong>[#STATIONS_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-devices" aria-hidden="true"></i>Устройств: <strong>[#DEVICES_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-list-check" aria-hidden="true"></i>Умений: <strong>[#CAPABILITIES_TOTAL#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-arrow-left" aria-hidden="true"></i><span class="md-btn__label">К станциям</span></a>
+            <a href="[#KB_README#]" class="md-btn md-btn--ghost"><i class="ti ti-book" aria-hidden="true"></i><span class="md-btn__label">База знаний</span></a>
+        </div>
+    </header>
+
+    <div class="md-yv-about-grid">
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Возможности</div>
+                    <h2 class="md-card__title">Что умеет модуль</h2>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <ul class="md-yv-feature-list">
+                    <li><i class="ti ti-speakerphone" aria-hidden="true"></i><div><strong>Станции</strong><span>Список колонок, онлайн-статус, громкость и текущий трек.</span></div></li>
+                    <li><i class="ti ti-volume" aria-hidden="true"></i><div><strong>TTS</strong><span>Локальное озвучивание через Glagol и облачный Cloud TTS.</span></div></li>
+                    <li><i class="ti ti-link" aria-hidden="true"></i><div><strong>Умения и связи</strong><span>Привязка capabilities и properties к объектам MajorDoMo, включая методы.</span></div></li>
+                    <li><i class="ti ti-clock" aria-hidden="true"></i><div><strong>Будильники</strong><span>Создание и удаление будильников, привязка к свойству с датой.</span></div></li>
+                    <li><i class="ti ti-messages" aria-hidden="true"></i><div><strong>Вопросы Алисе</strong><span>Локальный диалог и запись ответа в свойство объекта.</span></div></li>
+                    <li><i class="ti ti-api" aria-hidden="true"></i><div><strong>API</strong><span>Отправка текста, команд и уведомлений на группы станций.</span></div></li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Документация</div>
+                    <h2 class="md-card__title">С чего начать</h2>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <div class="md-yv-doc-links">
+                    <a href="[#KB_SETUP#]"><i class="ti ti-rocket" aria-hidden="true"></i><div><strong>Установка и авторизация</strong><span>Пошаговая настройка модуля и вход в Яндекс.</span></div><i class="ti ti-arrow-right" aria-hidden="true"></i></a>
+                    <a href="[#KB_API#]"><i class="ti ti-code" aria-hidden="true"></i><div><strong>API и примеры</strong><span>callAPI, команды, notify-группы и параметры.</span></div><i class="ti ti-arrow-right" aria-hidden="true"></i></a>
+                    <a href="[#KB_README#]"><i class="ti ti-book" aria-hidden="true"></i><div><strong>Вся документация</strong><span>Станции, устройства, сценарии и диагностика.</span></div><i class="ti ti-arrow-right" aria-hidden="true"></i></a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Совместимость</div>
+                <h2 class="md-card__title">Данные и старые ссылки</h2>
+                <p class="md-card__subtitle">Обновление не требует переустановки и не удаляет станции, устройства и привязки.</p>
+            </div>
+        </header>
+        <div class="md-card__body">
+            <dl class="md-yv-meta">
+                <div><dt>Таблицы</dt><dd><code>yastations</code>, <code>yadevices</code>, <code>yadevices_capabilities</code></dd></div>
+                <div><dt>Старый API</dt><dd><code>/api/module/yadevices</code></dd></div>
+                <div><dt>Плеер</dt><dd><code>/module/yadevices.html?station=ID</code></dd></div>
+                <div><dt>PHP</dt><dd>8.1+</dd></div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Ссылки</div>
+                <h2 class="md-card__title">Полезное</h2>
+            </div>
+        </header>
+        <div class="md-card__body">
+            <div class="md-yv-actions">
+                <a href="[#FORUM_URL#]" target="_blank" rel="noopener" class="md-btn md-btn--secondary"><i class="ti ti-message-circle" aria-hidden="true"></i>Обсуждение на форуме</a>
+                <a href="[#GITHUB_URL#]" target="_blank" rel="noopener" class="md-btn md-btn--secondary"><i class="ti ti-brand-github" aria-hidden="true"></i>Исходный код</a>
+                <a href="[#YANDEX_DOCS_URL#]" target="_blank" rel="noopener" class="md-btn md-btn--secondary"><i class="ti ti-external-link" aria-hidden="true"></i>Документация Яндекса</a>
+                <a href="?view_mode=settings" class="md-btn md-btn--ghost"><i class="ti ti-settings" aria-hidden="true"></i>Настройки</a>
+            </div>
+        </div>
+    </section>
+</div>

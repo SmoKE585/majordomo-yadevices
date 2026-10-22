@@ -1,0 +1,150 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-speakerphone" aria-hidden="true"></i>Я.Устройства</div>
+            <h1 class="md-ui-hero__title">Яндекс Станции</h1>
+            <p class="md-ui-hero__lede">Локальное и облачное управление колонками, озвучивание событий, будильники и музыкальный плеер.</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item">
+                    [#if AUTHORIZED="1"#]<i class="ti ti-shield-check" aria-hidden="true"></i>Яндекс: <strong>подключён</strong>[#else#]<i class="ti ti-shield-lock" aria-hidden="true"></i>Яндекс: <strong>не подключён</strong>[#endif#]
+                </span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-speakerphone" aria-hidden="true"></i>Станций: <strong>[#STATIONS_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-devices" aria-hidden="true"></i>Устройств: <strong>[#DEVICES_TOTAL#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-volume" aria-hidden="true"></i>TTS: <strong>[#STATIONS_TTS#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            [#if AUTHORIZED="1"#]
+            <form action="?view_mode=refresh" method="post" class="md-yv-inline-form">
+                <button type="submit" class="md-btn md-btn--primary">
+                    <i class="ti ti-refresh" aria-hidden="true"></i><span class="md-btn__label">Обновить</span>
+                </button>
+            </form>
+            [#else#]
+            <a href="?view_mode=auth" class="md-btn md-btn--primary">
+                <i class="ti ti-shield-lock" aria-hidden="true"></i><span class="md-btn__label">Авторизоваться</span>
+            </a>
+            [#endif#]
+            <a href="?view_mode=settings" class="md-btn md-btn--secondary">
+                <i class="ti ti-settings" aria-hidden="true"></i><span class="md-btn__label">Настройки</span>
+            </a>
+            <a href="?view_mode=about" class="md-btn md-btn--ghost">
+                <i class="ti ti-info-circle" aria-hidden="true"></i><span class="md-btn__label">О модуле</span>
+            </a>
+        </div>
+    </header>
+
+    [#if AUTHORIZED!="1"#]
+    <div class="md-alert md-alert--warning" role="alert">
+        <i class="ti ti-shield-lock" aria-hidden="true"></i>
+        <div><strong>Авторизация не выполнена.</strong> Войдите в Яндекс, чтобы модуль мог загрузить станции и устройства. <a href="?view_mode=auth">Перейти к авторизации</a>.</div>
+    </div>
+    [#endif#]
+
+    [#HINT#]
+
+    <div class="md-ui-kpi-grid">
+        <div class="md-kpi md-kpi--primary">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-speakerphone" aria-hidden="true"></i></span><span class="md-kpi__label">Станции</span></div>
+            <div class="md-kpi__value">[#STATIONS_TOTAL#]</div>
+            <div class="md-kpi__meta">Добавлены из аккаунта Яндекса</div>
+        </div>
+        <div class="md-kpi md-kpi--success">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-wifi" aria-hidden="true"></i></span><span class="md-kpi__label">Онлайн</span></div>
+            <div class="md-kpi__value">[#STATIONS_ONLINE#]</div>
+            <div class="md-kpi__meta">Отвечают на команды</div>
+        </div>
+        <div class="md-kpi md-kpi--info">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-plug-connected" aria-hidden="true"></i></span><span class="md-kpi__label">Локально готовы</span></div>
+            <div class="md-kpi__value">[#STATIONS_LOCAL_READY#]</div>
+            <div class="md-kpi__meta">IP и токен заполнены</div>
+        </div>
+        <div class="md-kpi md-kpi--warning">
+            <div class="md-kpi__top"><span class="md-kpi__icon"><i class="ti ti-cloud" aria-hidden="true"></i></span><span class="md-kpi__label">Облако доступно</span></div>
+            <div class="md-kpi__value">[#STATIONS_CLOUD_READY#]</div>
+            <div class="md-kpi__meta">Можно включить Cloud TTS</div>
+        </div>
+    </div>
+
+    [#inc tabs.html#]
+
+    [#if RESULT#]
+    <div class="md-yv-toolbar">
+        <div class="md-table__search">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="search" data-yv-station-search placeholder="Поиск по названию, платформе или треку" aria-label="Поиск станций" autocomplete="off">
+        </div>
+        <select class="md-table__filter" data-yv-platform-filter aria-label="Фильтр по платформе">
+            <option value="">Все платформы</option>
+            [#begin PLATFORM_OPTIONS#]
+            <option value="[#VALUE#]">[#TITLE#]</option>
+            [#end PLATFORM_OPTIONS#]
+        </select>
+        <div class="md-table__meta" data-yv-station-count>Станций: [#STATIONS_TOTAL#]</div>
+    </div>
+
+    <div class="md-yv-station-grid" data-yv-stations>
+        [#begin RESULT#]
+        <article class="md-yv-station [#if ONLINE_TONE="offline"#]is-offline[#endif#]" data-yv-station data-search="[#SEARCH#]" data-platform="[#PLATFORM#]">
+            <div class="md-yv-station__head">
+                <span class="md-yv-station__icon"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i></span>
+                <div class="md-yv-station__identity">
+                    <h2 class="md-yv-station__name"><a href="[#EDIT_URL#]">[#TITLE#]</a></h2>
+                    <div class="md-yv-station__meta">[#PLATFORM_TITLE#][#if STATION_ID!=""#] · <code>[#STATION_ID#]</code>[#endif#]</div>
+                </div>
+                <span class="md-status md-status--[#ONLINE_TONE#]"><span class="md-status__dot"></span>[#ONLINE_LABEL#]</span>
+            </div>
+
+            <div class="md-yv-station__badges">
+                <span class="md-badge md-badge--[#TTS_TONE#]"><i class="ti ti-volume" aria-hidden="true"></i>[#TTS_LABEL#]</span>
+                [#if LOCAL_CAPABLE="1"#]
+                    [#if LOCAL_READY="1"#]<span class="md-badge md-badge--success"><i class="ti ti-plug-connected" aria-hidden="true"></i>local</span>[#else#]<span class="md-badge md-badge--warning"><i class="ti ti-plug-off" aria-hidden="true"></i>local не готов</span>[#endif#]
+                [#else#]
+                    <span class="md-badge md-badge--neutral"><i class="ti ti-cloud" aria-hidden="true"></i>cloud only</span>
+                [#endif#]
+                [#if CLOUD_READY="1"#]<span class="md-badge md-badge--info"><i class="ti ti-cloud-check" aria-hidden="true"></i>cloud</span>[#endif#]
+            </div>
+
+            <div class="md-yv-volume" title="Громкость [#VOLUME#]%">
+                <span class="md-yv-volume__label"><i class="ti ti-volume" aria-hidden="true"></i>[#VOLUME#]%</span>
+                <span class="md-yv-volume__track"><span style="width:[#VOLUME#]%"></span></span>
+            </div>
+
+            [#if PLAYING="1"#]
+            <div class="md-yv-track">
+                <i class="ti ti-music" aria-hidden="true"></i>
+                <div><strong>[#TRACK#]</strong><span>[#ARTIST#]</span></div>
+            </div>
+            [#else#]
+            <div class="md-yv-track md-yv-track--empty"><i class="ti ti-music-off" aria-hidden="true"></i><div><span>Сейчас не воспроизводит</span></div></div>
+            [#endif#]
+
+            <div class="md-yv-station__actions">
+                <a href="[#EDIT_URL#]" class="md-btn md-btn--secondary md-btn--sm">
+                    <i class="ti ti-adjustments" aria-hidden="true"></i><span class="md-btn__label">Настроить</span>
+                </a>
+                <a href="[#PLAYER_URL#]" target="_blank" rel="noopener" class="md-btn md-btn--ghost md-btn--sm">
+                    <i class="ti ti-player-play" aria-hidden="true"></i><span class="md-btn__label">Плеер</span>
+                </a>
+            </div>
+        </article>
+        [#end RESULT#]
+    </div>
+
+    <div class="md-empty md-yv-no-results" data-yv-station-empty hidden>
+        <span class="md-empty__icon"><i class="ti ti-search" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Ничего не найдено</div>
+        <p class="md-empty__text">Измените запрос или выберите другую платформу.</p>
+    </div>
+    [#else RESULT#]
+    <div class="md-empty">
+        <span class="md-empty__icon"><i class="ti ti-speakerphone" aria-hidden="true"></i></span>
+        <div class="md-empty__title">Станций пока нет</div>
+        <p class="md-empty__text">Авторизуйтесь в Яндексе и нажмите «Обновить» — модуль загрузит колонки из аккаунта.</p>
+        <div class="md-empty__actions">
+            <a href="?view_mode=auth" class="md-btn md-btn--primary">Авторизоваться</a>
+            [#if AUTHORIZED="1"#]<a href="?view_mode=refresh" class="md-btn md-btn--secondary">Обновить</a>[#endif#]
+        </div>
+    </div>
+    [#endif RESULT#]
+</div>

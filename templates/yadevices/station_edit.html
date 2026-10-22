@@ -1,0 +1,420 @@
+<div class="md-ui-page md-ui-page--stack md-yv-page">
+    <header class="md-ui-hero">
+        <div>
+            <div class="md-ui-hero__eyebrow"><i class="ti ti-[#ICON_TI#]" aria-hidden="true"></i>Я.Устройства · станция</div>
+            <h1 class="md-ui-hero__title">[#TITLE#]</h1>
+            <p class="md-ui-hero__lede">[#PLATFORM_TITLE#][#if ORIGINAL_TITLE!="" && ORIGINAL_TITLE!=TITLE#] · в Яндексе: [#ORIGINAL_TITLE#][#endif#]</p>
+            <div class="md-ui-hero__meta">
+                <span class="md-ui-hero__meta-item"><i class="ti ti-plug-connected" aria-hidden="true"></i>locally: <strong>[#if LOCAL_READY="1"#]готово[#else#]не готово[#endif#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-cloud" aria-hidden="true"></i>cloud: <strong>[#if CLOUD_AVAILABLE="1"#]доступно[#else#]нет[#endif#]</strong></span>
+                <span class="md-ui-hero__meta-item"><i class="ti ti-volume" aria-hidden="true"></i>TTS: <strong>[#if TTS="2"#]cloud[#else#][#if TTS="1"#]local[#else#]off[#endif#][#endif#]</strong></span>
+            </div>
+        </div>
+        <div class="md-ui-hero__actions">
+            <a href="?view_mode=" class="md-btn md-btn--secondary"><i class="ti ti-arrow-left" aria-hidden="true"></i><span class="md-btn__label">К станциям</span></a>
+            <a href="[#PLAYER_URL#]" target="_blank" rel="noopener" class="md-btn md-btn--ghost"><i class="ti ti-player-play" aria-hidden="true"></i><span class="md-btn__label">Открыть плеер</span></a>
+        </div>
+    </header>
+
+    [#if OK_MSG!=""#]
+    <div class="md-alert md-alert--success" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><div>[#OK_MSG#]</div></div>
+    [#endif#]
+    [#if ERR_MSG!=""#]
+    <div class="md-alert md-alert--danger" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><div>[#ERR_MSG#]</div></div>
+    [#endif#]
+
+    [#HINT#]
+
+    <div class="md-yv-form-grid">
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Основное</div>
+                    <h2 class="md-card__title">Название и режим</h2>
+                    <p class="md-card__subtitle">Локальное имя хранится только в MajorDoMo. Оригинальное имя Яндекса не меняется.</p>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-fields">
+                    <input type="hidden" name="view_mode" value="edit_yastations">
+                    <input type="hidden" name="id" value="[#ID#]">
+                    <input type="hidden" name="mode" value="update">
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-station-title">Название в MajorDoMo</label>
+                        <div class="md-field__control">
+                            <input class="md-input" id="yv-station-title" type="text" name="title" value="[#TITLE#]" maxlength="255" placeholder="Например: Мини на кухне">
+                        </div>
+                        <div class="md-field__hint">Оригинальное имя: <strong>[#ORIGINAL_TITLE#]</strong></div>
+                    </div>
+
+                    [#if LOCAL_CAPABLE="1"#]
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-station-ip">IP станции</label>
+                        <div class="md-input-shell">
+                            <input class="md-input" id="yv-station-ip" type="text" name="ip" value="[#IP#]" placeholder="192.168.1.50" inputmode="decimal">
+                            <a class="md-input-shell__action" href="?view_mode=edit_yastations&id=[#ID#]&mode=detect_ip" title="Определить автоматически" aria-label="Определить IP автоматически"><i class="ti ti-wand" aria-hidden="true"></i></a>
+                        </div>
+                        <div class="md-field__hint">Нужен для локального Glagol. Порт 1961. [#if IP_TEST_AVAILABLE="1"#]<a href="?view_mode=edit_yastations&id=[#ID#]&mode=test_local">Проверить доступность</a>[#endif#]</div>
+                    </div>
+                    [#endif#]
+
+                    <div class="md-yv-choice-label">Озвучивание событий</div>
+                    <div class="md-choice-group md-yv-tts-group">
+                        [#begin TTS_MODES#]
+                        <label class="md-choice">
+                            <input class="md-choice__input" type="radio" name="tts" value="[#VALUE#]" data-md-raw-checkbox [#if CHECKED="1"#]checked[#endif#] [#if DISABLED="1"#]disabled[#endif#]>
+                            <span class="md-choice__surface">
+                                <span class="md-choice__body">
+                                    <span class="md-choice__title">[#LABEL#]</span>
+                                    <span class="md-choice__desc">[#DESCRIPTION#]</span>
+                                </span>
+                                <span class="md-choice__marker" aria-hidden="true"></span>
+                            </span>
+                        </label>
+                        [#end TTS_MODES#]
+                    </div>
+
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-min-level">Минимальный уровень важности</label>
+                        <div class="md-field__control">
+                            <input class="md-input" id="yv-min-level" type="text" name="min_level_text" value="[#MIN_LEVEL_TEXT#]" placeholder="%ThisComputer.minMsgLevel%">
+                        </div>
+                        <label class="md-check md-yv-inline-check">
+                            <input class="md-check__input" type="checkbox" data-md-raw-checkbox data-yv-muvs>
+                            <span class="md-check__box" aria-hidden="true"><i class="ti ti-check" aria-hidden="true"></i></span>
+                            <span class="md-check__text"><span class="md-check__label">Использовать системный МУВС</span></span>
+                        </label>
+                    </div>
+
+                    <label class="md-switch">
+                        <input class="md-switch__input" type="checkbox" data-md-raw-checkbox name="allow_ask" value="1" [#if ALLOW_ASK="1"#]checked[#endif#]>
+                        <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+                        <span class="md-switch__text">
+                            <span class="md-switch__label">Использовать для вопросов ASK</span>
+                            <span class="md-switch__desc">Станция сможет отвечать на вопросы сценариев через локальный Glagol.</span>
+                        </span>
+                    </label>
+
+                    <div class="md-yv-form-actions">
+                        <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-device-floppy" aria-hidden="true"></i>Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Идентификаторы</div>
+                    <h2 class="md-card__title">Доступ и токен</h2>
+                    <p class="md-card__subtitle">Значения нужны для диагностики. Device token используется только локальным циклом.</p>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <dl class="md-yv-meta md-yv-meta--ids">
+                    <div><dt>MDM ID</dt><dd><code>[#ID#]</code></dd></div>
+                    <div><dt>Платформа</dt><dd><code>[#PLATFORM#]</code></dd></div>
+                    <div><dt>Station ID</dt><dd><code>[#STATION_ID#]</code></dd></div>
+                    <div><dt>IoT ID</dt><dd><code>[#IOT_ID#]</code></dd></div>
+                    <div><dt>Обновлено</dt><dd>[#UPDATED#]</dd></div>
+                </dl>
+
+                <div class="md-yv-token-block">
+                    <div class="md-yv-token-block__head"><span>Device token</span>[#if DEVICE_TOKEN!=""#]<span class="md-badge md-badge--success"><i class="ti ti-key" aria-hidden="true"></i>получен</span>[#else#]<span class="md-badge md-badge--warning"><i class="ti ti-key-off" aria-hidden="true"></i>нет</span>[#endif#]</div>
+                    [#if DEVICE_TOKEN!=""#]
+                    <div class="md-yv-copy-row">
+                        <code class="md-yv-token">[#DEVICE_TOKEN#]</code>
+                        <button type="button" class="md-icon-btn md-icon-btn--sm" data-yv-copy="[#DEVICE_TOKEN#]" aria-label="Скопировать токен"><i class="ti ti-copy" aria-hidden="true"></i></button>
+                    </div>
+                    [#else#]
+                    <p class="md-yv-muted">Токен ещё не сформирован. Он нужен для локального управления.</p>
+                    <a href="?view_mode=generate_dev_token&id=[#ID#]" class="md-btn md-btn--secondary md-btn--sm" data-md-confirm="Запросить device token у Яндекса?"><i class="ti ti-key" aria-hidden="true"></i>Сформировать токен</a>
+                    [#endif#]
+                </div>
+
+                <div class="md-yv-player-preview">
+                    <div class="md-yv-player-preview__head"><span>Плеер для сцены</span><a href="[#PLAYER_URL#]" target="_blank" rel="noopener">Открыть отдельно</a></div>
+                    <iframe src="[#PLAYER_URL#]" title="Плеер станции [#TITLE#]" loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Привязки</div>
+                <h2 class="md-card__title">Свойства MajorDoMo</h2>
+                <p class="md-card__subtitle">Будильник, вопрос и ответ Алисы можно связать с объектами и свойствами.</p>
+            </div>
+        </header>
+        <div class="md-card__body">
+            <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-links">
+                <input type="hidden" name="view_mode" value="edit_yastations">
+                <input type="hidden" name="id" value="[#ID#]">
+                <input type="hidden" name="mode" value="update_links">
+
+                <div class="md-yv-link-row">
+                    <div class="md-yv-link-row__label">
+                        <span class="md-yv-link-row__title"><i class="ti ti-alarm" aria-hidden="true"></i>Будильник</span>
+                        <span class="md-yv-link-row__desc">Свойство с датой и временем создаёт будильник в Яндексе. Очистка свойства удаляет связанный будильник.</span>
+                        [#if ALARM_LINKED_ID!=""#]<span class="md-yv-link-row__meta">alarm_id: <code>[#ALARM_LINKED_ID#]</code></span>[#endif#]
+                        [#if ALARM_LINKED_VALUE!=""#]<span class="md-yv-link-row__meta">время: <code>[#ALARM_LINKED_VALUE#]</code></span>[#endif#]
+                    </div>
+                    <div class="md-yv-link-row__control">
+                        <div class="md-yv-link-fields">
+                            <input class="md-input" type="text" id="alarm_linked_object" name="alarm_linked_object" value="[#ALARM_LINKED_OBJECT#]" placeholder="Объект" autocomplete="off">
+                            <input class="md-input" type="text" id="alarm_linked_property" name="alarm_linked_property" value="[#ALARM_LINKED_PROPERTY#]" placeholder="Свойство" autocomplete="off">
+                        </div>
+                        <div class="md-yv-link-picker">
+                            [#module name="linkedobject" object_field="alarm_linked_object" property_field="alarm_linked_property" uniq="alarm" width="100%"#]
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md-yv-link-row">
+                    <div class="md-yv-link-row__label">
+                        <span class="md-yv-link-row__title"><i class="ti ti-message-question" aria-hidden="true"></i>Вопрос Алисе</span>
+                        <span class="md-yv-link-row__desc">При изменении свойства модуль отправит текст в Алису через локальный Glagol.</span>
+                    </div>
+                    <div class="md-yv-link-row__control">
+                        <div class="md-yv-link-fields">
+                            <input class="md-input" type="text" id="ask_question_linked_object" name="ask_question_linked_object" value="[#ASK_QUESTION_LINKED_OBJECT#]" placeholder="Объект" autocomplete="off">
+                            <input class="md-input" type="text" id="ask_question_linked_property" name="ask_question_linked_property" value="[#ASK_QUESTION_LINKED_PROPERTY#]" placeholder="Свойство" autocomplete="off">
+                        </div>
+                        <div class="md-yv-link-picker">
+                            [#module name="linkedobject" object_field="ask_question_linked_object" property_field="ask_question_linked_property" uniq="ask_question" width="100%"#]
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md-yv-link-row">
+                    <div class="md-yv-link-row__label">
+                        <span class="md-yv-link-row__title"><i class="ti ti-message-check" aria-hidden="true"></i>Ответ Алисы</span>
+                        <span class="md-yv-link-row__desc">Сюда записывается текст ответа, если станция его вернула.</span>
+                    </div>
+                    <div class="md-yv-link-row__control">
+                        <div class="md-yv-link-fields">
+                            <input class="md-input" type="text" id="ask_answer_linked_object" name="ask_answer_linked_object" value="[#ASK_ANSWER_LINKED_OBJECT#]" placeholder="Объект" autocomplete="off">
+                            <input class="md-input" type="text" id="ask_answer_linked_property" name="ask_answer_linked_property" value="[#ASK_ANSWER_LINKED_PROPERTY#]" placeholder="Свойство" autocomplete="off">
+                        </div>
+                        <div class="md-yv-link-picker">
+                            [#module name="linkedobject" object_field="ask_answer_linked_object" property_field="ask_answer_linked_property" uniq="ask_answer" width="100%"#]
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md-yv-form-actions">
+                    <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-link" aria-hidden="true"></i>Сохранить привязки</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <div class="md-yv-form-grid">
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Яндекс</div>
+                    <h2 class="md-card__title">Настройки станции</h2>
+                    <p class="md-card__subtitle">Не беспокоить, язык, яркость LED и визуализация. Настройки читаются из Яндекса.</p>
+                </div>
+            </header>
+            <div class="md-card__body">
+                [#if STATION_CONFIG_UNAVAILABLE="1"#]
+                <div class="md-alert md-alert--warning"><i class="ti ti-cloud-off" aria-hidden="true"></i><div>Конфигурация станции недоступна. Проверьте авторизацию и обновите список.</div></div>
+                [#else#]
+                <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-fields">
+                    <input type="hidden" name="view_mode" value="edit_yastations">
+                    <input type="hidden" name="id" value="[#ID#]">
+                    <input type="hidden" name="mode" value="update_station_settings">
+                    <label class="md-switch">
+                        <input class="md-switch__input" type="checkbox" data-md-raw-checkbox name="dnd" value="1" [#if STATION_DND="1"#]checked[#endif#] [#if STATION_DND_SUPPORTED!="1"#]disabled[#endif#]>
+                        <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+                        <span class="md-switch__text"><span class="md-switch__label">Не беспокоить</span><span class="md-switch__desc">[#if STATION_DND_SUPPORTED="1"#]Включить режим DND.[#else#]Устройство не поддерживает DND.[#endif#]</span></span>
+                    </label>
+                    <label class="md-switch">
+                        <input class="md-switch__input" type="checkbox" data-md-raw-checkbox name="beta" value="1" [#if STATION_BETA="1"#]checked[#endif#]>
+                        <span class="md-switch__track" aria-hidden="true"><span class="md-switch__thumb"></span></span>
+                        <span class="md-switch__text"><span class="md-switch__label">Beta-функции</span><span class="md-switch__desc">Включить экспериментальные возможности станции.</span></span>
+                    </label>
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-locale">Язык</label>
+                        <div class="md-field__control">
+                            <select class="md-select" id="yv-locale" name="locale">
+                                [#begin LOCALE_OPTIONS#]
+                                <option value="[#VALUE#]" [#if SELECTED="1"#]selected[#endif#]>[#LABEL#]</option>
+                                [#end LOCALE_OPTIONS#]
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-led">Яркость LED / часов</label>
+                        <div class="md-field__control">
+                            <input class="md-input" id="yv-led" type="text" name="led_brightness" value="[#STATION_LED_BRIGHTNESS#]" placeholder="0..1, пусто = не менять, -1 = авто">
+                        </div>
+                    </div>
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-visualization">Визуализация</label>
+                        <div class="md-field__control">
+                            <select class="md-select" id="yv-visualization" name="visualization">
+                                <option value="">Не менять</option>
+                                <option value="clock" [#if STATION_VISUALIZATION="clock"#]selected[#endif#]>Показывать часы</option>
+                                <option value="auto" [#if STATION_VISUALIZATION="auto"#]selected[#endif#]>Авто-визуализация музыки</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md-yv-form-actions">
+                        <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-device-floppy" aria-hidden="true"></i>Сохранить настройки</button>
+                    </div>
+                </form>
+                [#endif#]
+            </div>
+        </section>
+
+        <section class="md-card">
+            <header class="md-card__head">
+                <div class="md-card__titles">
+                    <div class="md-card__eyebrow">Будильники</div>
+                    <h2 class="md-card__title">Расписание</h2>
+                    <p class="md-card__subtitle">Создавайте будильники вручную или через привязанное свойство.</p>
+                </div>
+            </header>
+            <div class="md-card__body">
+                <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-alarm-form">
+                    <input type="hidden" name="view_mode" value="edit_yastations">
+                    <input type="hidden" name="id" value="[#ID#]">
+                    <input type="hidden" name="mode" value="create_alarm">
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-alarm-date">Дата</label>
+                        <input class="md-input" id="yv-alarm-date" type="date" name="alarm_date" value="[#TODAY#]" required>
+                    </div>
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-alarm-time">Время</label>
+                        <input class="md-input" id="yv-alarm-time" type="time" name="alarm_time" required>
+                    </div>
+                    <button type="submit" class="md-btn md-btn--secondary"><i class="ti ti-plus" aria-hidden="true"></i>Создать</button>
+                </form>
+
+                [#if ALARMS#]
+                <div class="md-table__scroll md-yv-alarm-table">
+                    <table class="md-table">
+                        <thead><tr><th>Дата</th><th>Время</th><th>Повтор</th><th>Включён</th><th></th></tr></thead>
+                        <tbody>
+                        [#begin ALARMS#]
+                        <tr>
+                            <td>[#DATE#]</td>
+                            <td>[#TIME#]</td>
+                            <td>[#RECURRING#]</td>
+                            <td>[#ENABLED#]</td>
+                            <td class="text-end">
+                                <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" data-md-confirm="Удалить будильник?">
+                                    <input type="hidden" name="view_mode" value="edit_yastations">
+                                    <input type="hidden" name="id" value="[#ID#]">
+                                    <input type="hidden" name="mode" value="cancel_alarm">
+                                    <input type="hidden" name="alarm_id" value="[#ALARM_ID#]">
+                                    <button type="submit" class="md-icon-btn md-icon-btn--sm md-icon-btn--danger" aria-label="Удалить будильник"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        [#end ALARMS#]
+                        </tbody>
+                    </table>
+                </div>
+                [#else#]
+                <p class="md-yv-muted">Будильников нет.</p>
+                [#endif#]
+            </div>
+        </section>
+    </div>
+
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">Проверка</div>
+                <h2 class="md-card__title">Тестирование и отладка</h2>
+                <p class="md-card__subtitle">Отправьте текст, команду или диалог, не создавая сценарий.</p>
+            </div>
+        </header>
+        <div class="md-card__body">
+            <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-test-form">
+                <input type="hidden" name="view_mode" value="edit_yastations">
+                <input type="hidden" name="id" value="[#ID#]">
+                <input type="hidden" name="mode" value="send_text">
+
+                <div class="md-field">
+                    <label class="md-field__label" for="yv-test-text">Текст или команда</label>
+                    <div class="md-field__control">
+                        <input class="md-input" id="yv-test-text" type="text" name="text" value="[#TEXT#]" placeholder="Например: Тестовое сообщение" maxlength="500">
+                    </div>
+                    <div class="md-yv-presets">
+                        <button type="button" class="md-badge md-badge--neutral" data-yv-preset="Тестовое сообщение">Тестовое сообщение</button>
+                        <button type="button" class="md-badge md-badge--neutral" data-yv-preset="громкость 6">громкость 6</button>
+                        <button type="button" class="md-badge md-badge--neutral" data-yv-preset="включи мою музыку">включи мою музыку</button>
+                    </div>
+                </div>
+
+                <div class="md-yv-test-controls">
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-test-cloud">Способ отправки</label>
+                        <select class="md-select" id="yv-test-cloud" name="cloud">
+                            <option value="0" [#if TTS!="2"#]selected[#endif#] [#if LOCAL_AVAILABLE!="1"#]disabled[#endif#]>Локально</option>
+                            <option value="1" [#if TTS="2"#]selected[#endif#] [#if CLOUD_AVAILABLE!="1"#]disabled[#endif#]>Облако Яндекса</option>
+                        </select>
+                    </div>
+                    <div class="md-field">
+                        <label class="md-field__label" for="yv-test-sendas">Отправить как</label>
+                        <select class="md-select" id="yv-test-sendas" name="sendas">
+                            <option value="0" [#if SENDAS="0" || SENDAS=""#]selected[#endif#]>Текст</option>
+                            <option value="1" [#if SENDAS="1"#]selected[#endif#]>Команда</option>
+                            <option value="2" [#if SENDAS="2"#]selected[#endif#]>Диалог (локально)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="md-btn md-btn--primary"><i class="ti ti-send" aria-hidden="true"></i>Отправить</button>
+                </div>
+                <p class="md-yv-muted">Облачный TTS ограничен 100 символами. Если станция не отвечает, проверьте системный сценарий на странице «Сценарии».</p>
+            </form>
+
+            [#if LOCAL_AVAILABLE="1"#]
+            <hr class="md-yv-divider">
+            <form action="?view_mode=edit_yastations&id=[#ID#]" method="post" class="md-yv-ask-form">
+                <input type="hidden" name="view_mode" value="edit_yastations">
+                <input type="hidden" name="id" value="[#ID#]">
+                <input type="hidden" name="mode" value="ask_alice">
+                <div class="md-field">
+                    <label class="md-field__label" for="yv-ask-text">Спросить Алису</label>
+                    <div class="md-field__control">
+                        <input class="md-input" id="yv-ask-text" type="text" name="ask_text" value="[#ASK_TEXT#]" placeholder="Например: какая сейчас погода?">
+                    </div>
+                    <div class="md-field__hint">Работает через локальный Glagol. Ответ записывается в привязанное свойство, если оно задано.</div>
+                </div>
+                <button type="submit" class="md-btn md-btn--secondary"><i class="ti ti-message-question" aria-hidden="true"></i>Спросить</button>
+            </form>
+            [#if ASK_ANSWER!=""#]
+            <div class="md-alert md-alert--info md-yv-answer"><i class="ti ti-message-check" aria-hidden="true"></i><div><strong>Ответ Алисы:</strong> [#ASK_ANSWER#]</div></div>
+            [#endif#]
+            [#endif#]
+        </div>
+    </section>
+
+    <section class="md-card">
+        <header class="md-card__head">
+            <div class="md-card__titles">
+                <div class="md-card__eyebrow">API</div>
+                <h2 class="md-card__title">Примеры команд</h2>
+                <p class="md-card__subtitle">Вызовы из сценариев MajorDoMo.</p>
+            </div>
+        </header>
+        <div class="md-card__body md-yv-api-examples">
+            <div class="md-yv-api-example"><span>Простое сообщение</span><pre class="md-yv-code">callAPI('/api/module/yadevices', 'GET', array('station' =&gt; [#ID#], 'command' =&gt; 'text', 'data' =&gt; 'раз-два-три'));</pre></div>
+            <div class="md-yv-api-example"><span>Notify-группа</span><pre class="md-yv-code">callAPI('/api/module/yadevices', 'GET', array('group' =&gt; 'all', 'command' =&gt; 'text', 'data' =&gt; 'Текст'));</pre></div>
+            <div class="md-yv-api-example"><span>Громкость</span><pre class="md-yv-code">callAPI('/api/module/yadevices', 'GET', array('station' =&gt; [#ID#], 'command' =&gt; 'setVolume', 'data' =&gt; 6));</pre></div>
+            <div class="md-yv-api-example"><span>Эффект речи</span><pre class="md-yv-code">callAPI('/api/module/yadevices', 'GET', array('station' =&gt; [#ID#], 'command' =&gt; 'text', 'data' =&gt; '&lt;speaker effect="megaphone"&gt;Ехал Грека через реку'));</pre></div>
+        </div>
+    </section>
+
+    <div class="md-yv-danger-zone">
+        <div><strong>Удалить станцию</strong><span>Связи со свойствами объектов будут сняты. Устройство тоже исчезнет из списка.</span></div>
+        <a href="?view_mode=delete_yastations&id=[#ID#]" class="md-btn md-btn--danger" data-md-confirm="Удалить станцию «[#TITLE#]» и связанное устройство?">Удалить</a>
+    </div>
+</div>

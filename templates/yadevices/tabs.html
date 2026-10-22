@@ -1,0 +1,19 @@
+<ul class="nav nav-tabs md-tabs md-yv-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link [#if ACTIVE_TAB="stations"#]active[#endif#]" href="?view_mode=">
+            <i class="ti ti-speakerphone" aria-hidden="true"></i>Станции
+            [#if NAV_STATIONS!="0"#]<span class="md-badge md-badge--neutral">[#NAV_STATIONS#]</span>[#endif#]
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link [#if ACTIVE_TAB="devices"#]active[#endif#]" href="?view_mode=search_yadevices">
+            <i class="ti ti-devices" aria-hidden="true"></i>Устройства
+            [#if NAV_DEVICES!="0"#]<span class="md-badge md-badge--neutral">[#NAV_DEVICES#]</span>[#endif#]
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link [#if ACTIVE_TAB="scenarios"#]active[#endif#]" href="?view_mode=search_scenarios">
+            <i class="ti ti-wand" aria-hidden="true"></i>Сценарии
+        </a>
+    </li>
+</ul>

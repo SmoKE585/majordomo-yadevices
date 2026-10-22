@@ -26,33 +26,62 @@ spl_autoload_register(function ($class_name) {
 use \WSSC\WebSocketClient;
 use \WSSC\Components\ClientConfig;
 
+require_once __DIR__ . '/lib/Catalog.php';
+require_once __DIR__ . '/lib/Repository.php';
+require_once __DIR__ . '/lib/Hints.php';
 
 /**
- * YaDevices
- * @package project
+ * YaDevices — Yandex Station and smart-home devices integration.
+ *
+ * The module keeps the legacy public API (`api()`, `refreshDevices()`,
+ * `PropertySetHandle()`, the `yastations` / `yadevices` tables and the
+ * `module/yadevices.html` player) while the admin UI is rendered with the
+ * MajorDoMo design system (`md-*`).
+ *
+ * @package MajorDoMo\Modules\YaDevices
  * @author Wizard <sergejey@gmail.com>
  * @copyright http://majordomo.smartliving.ru/ (c)
- * @version 0.1 (wizard, 15:12:58 [Dec 31, 2019])
  */
-//
-//
 class yadevices extends module
 {
+    /** @var string */
+    public $version = '2.0.0';
+
+    /** @var string */
     private $lastAuthRefreshError = '';
 
+    /** @var YaDevicesRepository */
+    private $repository;
+
     /**
-     * yadevices
-     *
-     * Module class constructor
-     *
-     * @access private
+     * Module constructor.
      */
-    function __construct()
+    public function __construct()
     {
-        $this->name = "yadevices";
-        $this->title = "YaDevices";
-        $this->module_category = "<#LANG_SECTION_DEVICES#>";
+        $this->name = 'yadevices';
+        // Visual title only: the package, class, tables and API stay `yadevices`.
+        $this->title = 'Я.Устройства';
+        $this->module_category = '<#LANG_SECTION_DEVICES#>';
         $this->checkInstalled();
+        $this->syncTitle();
+        $this->repository = new YaDevicesRepository();
+    }
+
+    /**
+     * Keep the menu label in sync with the visual module title.
+     *
+     * The module key (`yadevices`), class, tables and API are intentionally
+     * unchanged; only the human-readable title is updated.
+     *
+     * @return void
+     */
+    private function syncTitle(): void
+    {
+        $row = SQLSelectOne("SELECT ID, TITLE FROM project_modules WHERE NAME='yadevices'");
+        if (is_array($row) && !empty($row['ID']) && (string)$row['TITLE'] !== $this->title) {
+            $row['TITLE'] = $this->title;
+            SQLUpdate('project_modules', $row);
+        }
     }
 
     /**
@@ -141,10 +170,22 @@ class yadevices extends module
      *
      * @access public
      */
-    function run()
+    public function run()
     {
         $out = array();
-        if ($this->action == 'admin') {
+        $this->action = isset($this->action) ? (string)$this->action : '';
+        $this->view_mode = isset($this->view_mode) ? (string)$this->view_mode : '';
+        $this->mode = isset($this->mode) ? (string)$this->mode : '';
+        $this->edit_mode = isset($this->edit_mode) ? (string)$this->edit_mode : '';
+        $this->tab = isset($this->tab) ? (string)$this->tab : '';
+
+        // Pretty URL / generic router: /panel/yadevices/<id>.html arrives as id only.
+        $requestedId = isset($this->id) ? (int)$this->id : 0;
+        if ($this->action === 'admin' && $this->view_mode === '' && $requestedId > 0) {
+            $this->view_mode = 'edit_yastations';
+        }
+
+        if ($this->action === 'admin') {
             $this->admin($out);
         } else {
             $this->usual($out);
@@ -160,8 +201,9 @@ class yadevices extends module
         $out['MODE'] = $this->mode;
         $out['ACTION'] = $this->action;
         $out['TAB'] = $this->tab;
+        $out['MODULE_VERSION'] = $this->version;
         $this->data = $out;
-        $p = new parser(DIR_TEMPLATES . $this->name . "/" . $this->name . ".html", $this->data, $this);
+        $p = new parser(DIR_TEMPLATES . $this->name . '/' . $this->name . '.html', $this->data, $this);
         $this->result = $p->result;
     }
 
@@ -242,116 +284,110 @@ class yadevices extends module
      *
      * @access public
      */
-    function admin(&$out)
+    /**
+     * Admin controller.
+     *
+     * @param array<string,mixed> $out
+     * @return void
+     */
+    public function admin(&$out)
     {
         $this->getConfig();
         $this->normalizeConfig();
-		$out['API_USERNAME'] = $this->config['API_USERNAME'];
-		$out['OAUTH_TOKEN'] = $this->config['OAUTH_TOKEN'];
-		
-        $out['X_TOKEN'] = $this->config['X_TOKEN'] != '' ? '1' : '0';
 
-        if ($this->view_mode == 'update_settings') {
-            $this->saveConfig();
-            $this->redirect("?");
-        }
-        if (isset($this->data_source) && !$_GET['data_source'] && !$_POST['data_source']) {
-            $out['SET_DATASOURCE'] = 1;
-        }
+        $authorized = !empty($this->config['AUTHORIZED']);
+        $out['AUTHORIZED'] = $authorized ? 1 : 0;
+        $out['HAS_COOKIE'] = file_exists(YADEVICES_COOKIE_PATH) ? 1 : 0;
+        $out['X_TOKEN_SET'] = trim((string)$this->config['X_TOKEN']) !== '' ? 1 : 0;
+        $out['OAUTH_TOKEN_SET'] = trim((string)$this->config['OAUTH_TOKEN']) !== '' ? 1 : 0;
+        $out['API_USERNAME'] = $this->e($this->config['API_USERNAME']);
+        $out['RELOAD_TIME'] = (int)$this->config['RELOAD_TIME'];
+        $out['RELOAD_LABEL'] = $this->e(YaDevicesCatalog::reloadLabel((int)$this->config['RELOAD_TIME']));
+        $out['FLASH_OK'] = $this->e((string)gr('ok_msg'));
+        $out['FLASH_ERR'] = $this->e((string)gr('err_msg'));
+        $out['FLASH_SAVED'] = (int)gr('saved');
+        $out['FLASH_REFRESH'] = $this->e((string)gr('refresh'));
+        $out['FLASH_LOGGED_OUT'] = (int)gr('logged_out');
+        $out['FLASH_TOKEN'] = $this->e((string)gr('token'));
+        $out['FLASH_SCENARIO'] = $this->e((string)gr('scenario'));
+        $out['NAV_STATIONS'] = $this->repository->count('yastations');
+        $out['NAV_DEVICES'] = $this->repository->count('yadevices');
+        $id = isset($this->id) ? (int)$this->id : 0;
 
-        if ($this->view_mode == 'auth') {
-            $this->auth($out);
-        }
-
-        if ($this->view_mode == 'refreshScenarios') {
-            $this->addScenarios();
-
-            $this->redirect("?");
-        }
-
-        if ($this->view_mode == 'logout') {
+        if ($this->view_mode === 'logout') {
             $this->clearAuthFiles();
             $this->config['AUTHORIZED'] = 0;
             $this->config['X_TOKEN'] = '';
             $this->config['OAUTH_TOKEN'] = '';
-
             $this->saveConfig();
-            $this->redirect("?");
-        }
-        if ($this->data_source == 'yastations' || $this->data_source == '') {
-            if ($this->view_mode == '' || $this->view_mode == 'search_yastations') {
-                $this->search_yastations($out);
-                //$out['LOGIN_STATUS'] = (int)$this->checkLogin();
-            }
-            if ($this->view_mode == 'search_yadevices') {
-                $this->search_yadevices($out);
-            }
-            if ($this->view_mode == 'search_scenarios') {
-                $this->search_scenarios($out);
-            }
-            if ($this->view_mode == 'edit_yastations') {
-                $this->edit_yastations($out, $this->id);
-            }
-            if ($this->view_mode == 'edit_yadevices') {
-                $this->edit_yadevices($out, $this->id);
-            }
-            if ($this->view_mode == 'delete_yastations') {
-                $this->delete_yastations($this->id);
-                $this->redirect("?");
-            }
-            if ($this->mode == 'refresh') {
-                $this->refreshDevices();
-                $this->redirect("?tab=" . $this->tab . "&view_mode=" . $this->view_mode);
-            }
+            $this->redirect('?logged_out=1');
         }
 
-        if ($this->view_mode == 'generate_dev_token') {
-            global $id;
+        if ($this->view_mode === 'update_settings' || $this->view_mode === 'update_settings_cycle') {
+            $this->saveSettings();
+        }
+
+        if ($this->view_mode === 'refresh' || $this->mode === 'refresh') {
+            if (!$authorized) {
+                $this->redirect('?refresh=noauth');
+            }
+            $result = $this->refreshDevices();
+            $this->addScenarios();
+            $this->redirect('?refresh=' . ($result === false ? 'error' : 'ok'));
+        }
+
+        if ($this->view_mode === 'generate_dev_token') {
             $this->getDeviceTokenByHand($id);
         }
 
-        if ($this->view_mode == 'update_settings_cycle') {
-            $cycleIsOnTime = gr('cycleIsOnTime');
-            $errorMonitor = gr('errorMonitor');
-            $errorMonitorType = gr('errorMonitorType');
-            $notifyGroups = $this->normalizeNotifyGroupsPost($_POST);
-
-            if ($errorMonitor == 'on') {
-                $this->config['ERRORMONITOR'] = 1;
-                $this->config['ERRORMONITORTYPE'] = $errorMonitorType;
-            } else {
-                $this->config['ERRORMONITOR'] = 0;
-                $this->config['ERRORMONITORTYPE'] = 0;
-            }
-
-            $this->config['RELOAD_TIME'] = $cycleIsOnTime ?? 10;
-            $this->config['NOTIFY_GROUPS'] = $notifyGroups;
-            $this->saveConfig();
-
-            setGlobal('cycle_yadevicesControl', 'restart');
-
-            $this->redirect("?");
+        if ($this->view_mode === 'delete_yastations') {
+            $this->delete_yastations($id);
+            $this->redirect('?ok_msg=' . urlencode('Станция удалена.'));
         }
 
-        //Проверка существования куки
-        if (file_exists(YADEVICES_COOKIE_PATH)) {
-            $out['COOKIE_FILE'] = 1;
-        } else {
-            $out['COOKIE_FILE'] = 0;
-        }
-		
-		if(empty($this->config['AUTHORIZED'])){
-			$out['AUTHORIZED'] = 0;
-		} else {
-            $out['AUTHORIZED'] = 1;
+        if ($this->view_mode === 'delete_yadevice') {
+            $this->delete_yadevice($id);
+            $this->redirect('?view_mode=search_yadevices&ok_msg=' . urlencode('Устройство удалено.'));
         }
 
-        $out['RELOAD_TIME'] = $this->config['RELOAD_TIME'];
-        $out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
-        $out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
-        $out['NOTIFY_GROUPS_TEXT'] = htmlspecialchars($this->notifyGroupsToText());
-        $out['NOTIFY_GROUPS'] = $this->prepareNotifyGroupsForTemplate();
-        $out['NOTIFY_STATIONS'] = $this->prepareNotifyStationsForTemplate();
+        if ($this->view_mode === 'auth') {
+            $this->auth($out);
+            $out['HINT'] = YaDevicesHints::auth();
+            return;
+        }
+
+        if ($this->view_mode === 'settings') {
+            $this->settings($out);
+            return;
+        }
+
+        if ($this->view_mode === 'about') {
+            $this->about($out);
+            return;
+        }
+
+        if ($this->view_mode === 'search_yadevices') {
+            $this->searchYadevices($out);
+            return;
+        }
+
+        if ($this->view_mode === 'search_scenarios') {
+            $this->searchScenarios($out);
+            return;
+        }
+
+        if ($this->view_mode === 'edit_yadevices') {
+            $this->editYadevices($out, $id);
+            return;
+        }
+
+        if ($this->view_mode === 'edit_yastations') {
+            $this->editYastations($out, $id);
+            return;
+        }
+
+        // Default route.
+        $this->searchYastations($out);
     }
 
     function auth(&$out) {
@@ -1053,8 +1089,8 @@ class yadevices extends module
 		//авторизация через QR
 		$check_qr_status = gr('check_qr_status');
 		if($check_qr_status){
-			header("HTTP/1.0: 200 OK\n");
-			header('Content-Type: application/json');
+			http_response_code(200);
+			header('Content-Type: application/json; charset=utf-8');
 			$use_cookie_file = YADEVICES_COOKIE_PATH.'_qr';
 			$csrf_token = gr('csrf_token');
 			$auth = urldecode(gr('auth'));
@@ -1081,8 +1117,10 @@ class yadevices extends module
 			exit;
 		}
         //Функции плеера
-		$station = gr('station');
-		if (empty($station)) $station = $this->id ?? $this->station;
+		$station = (int)gr('station');
+		if ($station <= 0) {
+            $station = (int)($this->id ?? $this->station ?? 0);
+        }
 		$out['STATION_ID'] = $station;
 
 		//$bgcolor = gr('bgcolor');
@@ -1098,41 +1136,325 @@ class yadevices extends module
 
         $ajax = gr('ajax');
 
-        $rec = SQLSelectOne("SELECT * FROM yastations WHERE ID = '" . dbSafe($station) . "'");
+        $rec = SQLSelectOne("SELECT * FROM yastations WHERE ID = " . $station);
 		if (!$rec) {
-            http_response_code(400);
+            http_response_code(404);
             die();
         }
-		$out['TITLE'] = $rec['TITLE'];
+		$out['TITLE'] = $this->e((string)$rec['TITLE']);
+        $out['VOLUME'] = (int)($rec['VOLUME'] ?? 0);
 		
-        if ($ajax && $station && $out['TITLE']) {
-            header("HTTP/1.0: 200 OK\n");
-            header('Content-Type: text/html; charset=utf-8');
-            $command = gr('control');
-            if (!empty(strip_tags($command))) {
-                $this->sendCommandToStation($rec, $command);
-                echo json_encode(array('status' => 'ok'));
+        if ($ajax && $station > 0) {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            $command = (string)gr('control');
+            if ($command !== '' && preg_match('/^[a-zA-Z]+$/', $command)) {
+                $sent = $this->sendCommandToStation($rec, $command);
+                echo json_encode(array('status' => $sent ? 'ok' : 'error'));
             } else {
 				usleep(200000);
 				$this->sendCommandToStation($rec, 'playerState');
+                echo json_encode(array('status' => 'ok'));
             }
             exit;
         }
     }
 
     /**
-     * yastations search
+     * Stations list.
      *
-     * @access public
+     * @param array<string,mixed> $out
+     * @return void
      */
-    function search_yastations(&$out)
+    private function searchYastations(array &$out): void
     {
-        require(DIR_MODULES . $this->name . '/yastations_search.inc.php');
+        $rows = $this->repository->stations();
+        $online = 0;
+        $localReady = 0;
+        $cloudReady = 0;
+        $ttsEnabled = 0;
+        $platforms = array();
+
+        foreach ($rows as $index => $row) {
+            $id = (int)$row['ID'];
+            $platform = (string)($row['PLATFORM'] ?? '');
+            $isOnline = (int)($row['IS_ONLINE'] ?? 0) === 1;
+            $localCapable = YaDevicesCatalog::isLocalPlatform($platform);
+            $localAvailable = $localCapable
+                && trim((string)($row['IP'] ?? '')) !== ''
+                && trim((string)($row['DEVICE_TOKEN'] ?? '')) !== '';
+            $cloudAvailable = !empty($this->config['AUTHORIZED']) && trim((string)($row['IOT_ID'] ?? '')) !== '';
+            $tts = (int)($row['TTS'] ?? 0);
+
+            if ($isOnline) {
+                $online++;
+            }
+            if ($localAvailable) {
+                $localReady++;
+            }
+            if ($cloudAvailable) {
+                $cloudReady++;
+            }
+            if ($tts > 0) {
+                $ttsEnabled++;
+            }
+            if ($platform !== '') {
+                $platforms[$platform] = YaDevicesCatalog::platformTitle($platform);
+            }
+
+            $rows[$index]['TITLE'] = $this->e((string)($row['TITLE'] ?: $row['ORIGINAL_TITLE'] ?: ('Станция #' . $id)));
+            $rows[$index]['ORIGINAL_TITLE'] = $this->e((string)($row['ORIGINAL_TITLE'] ?? ''));
+            $rows[$index]['PLATFORM_TITLE'] = $this->e(YaDevicesCatalog::platformTitle($platform));
+            $rows[$index]['PLATFORM'] = $this->e($platform);
+            $rows[$index]['ICON_TI'] = YaDevicesCatalog::deviceIcon('devices.types.smart_speaker.' . $platform);
+            $rows[$index]['ICON_URL'] = $this->e(YaDevicesCatalog::deviceIconUrl('devices.types.smart_speaker.' . $platform, false));
+            $rows[$index]['ONLINE_LABEL'] = $isOnline ? 'online' : 'offline';
+            $rows[$index]['ONLINE_TONE'] = $isOnline ? 'success' : 'offline';
+            $rows[$index]['LOCAL_CAPABLE'] = $localCapable ? 1 : 0;
+            $rows[$index]['LOCAL_READY'] = $localAvailable ? 1 : 0;
+            $rows[$index]['CLOUD_READY'] = $cloudAvailable ? 1 : 0;
+            $rows[$index]['TTS'] = $tts;
+            $rows[$index]['TTS_LABEL'] = $tts === 2 ? 'cloud TTS' : ($tts === 1 ? 'local TTS' : 'TTS off');
+            $rows[$index]['TTS_TONE'] = $tts === 2 ? 'info' : ($tts === 1 ? 'success' : 'neutral');
+            $rows[$index]['VOLUME'] = max(0, min(100, (int)($row['VOLUME'] ?? 0)));
+            $rows[$index]['PLAYING'] = (int)($row['PLAYING'] ?? 0) === 1 ? 1 : 0;
+            $rows[$index]['TRACK'] = $this->e((string)($row['TRACK'] ?? ''));
+            $rows[$index]['ARTIST'] = $this->e((string)($row['ARTIST'] ?? ''));
+            $rows[$index]['COVER'] = $this->e((string)($row['COVER'] ?? ''));
+            $rows[$index]['STATION_ID'] = $this->e((string)($row['STATION_ID'] ?? ''));
+            $rows[$index]['IOT_ID'] = $this->e((string)($row['IOT_ID'] ?? ''));
+            $rows[$index]['UPDATED'] = $this->e((string)($row['UPDATED'] ?? ''));
+            $rows[$index]['PLAYER_URL'] = ROOTHTML . 'module/yadevices.html?station=' . $id;
+            $rows[$index]['EDIT_URL'] = '?view_mode=edit_yastations&id=' . $id;
+            $rows[$index]['SEARCH'] = $this->e(mb_strtolower(
+                implode(' ', array(
+                    (string)($row['TITLE'] ?? ''),
+                    (string)($row['ORIGINAL_TITLE'] ?? ''),
+                    $platform,
+                    (string)($row['STATION_ID'] ?? ''),
+                    (string)($row['IP'] ?? ''),
+                    (string)($row['TRACK'] ?? ''),
+                    (string)($row['ARTIST'] ?? ''),
+                )),
+                'UTF-8'
+            ));
+        }
+
+        $out['RESULT'] = $rows;
+        $out['STATIONS_TOTAL'] = count($rows);
+        $out['STATIONS_ONLINE'] = $online;
+        $out['STATIONS_LOCAL_READY'] = $localReady;
+        $out['STATIONS_CLOUD_READY'] = $cloudReady;
+        $out['STATIONS_TTS'] = $ttsEnabled;
+        $out['DEVICES_TOTAL'] = $this->repository->count('yadevices');
+        $out['CAPABILITIES_TOTAL'] = $this->repository->count('yadevices_capabilities');
+        $out['PLATFORM_OPTIONS'] = $this->platformOptions($platforms);
+        $out['HINT'] = YaDevicesHints::main(!empty($this->config['AUTHORIZED']), file_exists(YADEVICES_COOKIE_PATH));
+        $out['ACTIVE_TAB'] = 'stations';
     }
 
-    function search_yadevices(&$out)
+    /**
+     * @param array<string,string> $platforms
+     * @return array<int,array{TITLE:string,VALUE:string}>
+     */
+    private function platformOptions(array $platforms): array
     {
-        require(DIR_MODULES . $this->name . '/yadevices_search.inc.php');
+        $options = array();
+        foreach ($platforms as $value => $title) {
+            $options[] = array('VALUE' => $this->e($value), 'TITLE' => $this->e($title));
+        }
+        usort($options, static function (array $left, array $right): int {
+            return strcasecmp($left['TITLE'], $right['TITLE']);
+        });
+
+        return $options;
+    }
+
+    /**
+     * Devices list.
+     *
+     * @param array<string,mixed> $out
+     * @return void
+     */
+    private function searchYadevices(array &$out): void
+    {
+        if ($this->mode === 'switch') {
+            $iotId = trim((string)gr('iot_id'));
+            $current = (int)gr('value');
+            $value = $current === 1 ? 0 : 1;
+            if ($iotId !== '') {
+                $this->sendValueToYandex($iotId, 'devices.capabilities.on_off', $value);
+                usleep(500000);
+            }
+            $this->redirect('?view_mode=search_yadevices');
+        }
+
+        $rows = $this->repository->devices();
+        $capabilities = $this->repository->capabilities();
+        $byDevice = array();
+        $linkedByDevice = array();
+        $onByDevice = array();
+        $toggleByDevice = array();
+        $stateByDevice = array();
+        foreach ($capabilities as $capability) {
+            $deviceId = (int)($capability['YADEVICE_ID'] ?? 0);
+            if ($deviceId <= 0) {
+                continue;
+            }
+            $byDevice[$deviceId][] = $capability;
+            if (trim((string)($capability['LINKED_OBJECT'] ?? '')) !== ''
+                && trim((string)($capability['LINKED_PROPERTY'] ?? '')) !== '') {
+                $linkedByDevice[$deviceId] = ($linkedByDevice[$deviceId] ?? 0) + 1;
+            }
+            $title = (string)($capability['TITLE'] ?? '');
+            if ($title === 'devices.capabilities.on_off') {
+                $toggleByDevice[$deviceId] = true;
+                $onByDevice[$deviceId] = (int)($capability['VALUE'] ?? 0) === 1 ? 1 : 0;
+            } elseif ($title === 'local.online' && !isset($onByDevice[$deviceId])) {
+                $onByDevice[$deviceId] = (int)($capability['VALUE'] ?? 0) === 1 ? 1 : 0;
+            }
+            if (!isset($stateByDevice[$deviceId]) && strpos($title, 'devices.properties.') === 0
+                && trim((string)($capability['VALUE'] ?? '')) !== '') {
+                $stateByDevice[$deviceId] = (string)$capability['VALUE'];
+            }
+        }
+
+        $skillsMap = array();
+        foreach ($rows as $row) {
+            $skillId = trim((string)($row['SKILL_ID'] ?? ''));
+            $key = $skillId !== '' ? $skillId : '__empty__';
+            if (!isset($skillsMap[$key])) {
+                $skillsMap[$key] = array(
+                    'ID' => $key,
+                    'TITLE' => $this->skillLabel($skillId, (string)($row['SKILL_NAME'] ?? '')),
+                    'COUNT' => 0,
+                );
+            }
+            $skillsMap[$key]['COUNT']++;
+        }
+
+        $hidden = json_decode((string)($this->config['HIDDEN_SKILLS'] ?? '[]'), true);
+        $hidden = is_array($hidden) ? array_map('strval', $hidden) : array();
+
+        if ($this->mode === 'save_skill_filter') {
+            $visible = isset($_POST['visible_skills']) && is_array($_POST['visible_skills'])
+                ? array_map('strval', $_POST['visible_skills'])
+                : array();
+            $newHidden = array();
+            foreach ($skillsMap as $key => $skill) {
+                if (!in_array($key, $visible, true)) {
+                    $newHidden[] = $key;
+                }
+            }
+            $this->config['HIDDEN_SKILLS'] = json_encode(array_values($newHidden));
+            $this->saveConfig();
+            $this->redirect('?view_mode=search_yadevices&saved=1');
+        }
+
+        $visibleRows = array();
+        $onCount = 0;
+        $linkedDevices = 0;
+        $visibleSkills = array();
+        foreach ($rows as $index => $row) {
+            $deviceId = (int)$row['ID'];
+            $skillId = trim((string)($row['SKILL_ID'] ?? ''));
+            $key = $skillId !== '' ? $skillId : '__empty__';
+            $visibleSkills[$key] = true;
+            if (in_array($key, $hidden, true)) {
+                continue;
+            }
+
+            $deviceCaps = $byDevice[$deviceId] ?? array();
+            $linked = (int)($linkedByDevice[$deviceId] ?? 0);
+            $isOn = (int)($onByDevice[$deviceId] ?? 0);
+            if ($isOn === 1) {
+                $onCount++;
+            }
+            if ($linked > 0) {
+                $linkedDevices++;
+            }
+
+            $deviceType = (string)($row['DEVICE_TYPE'] ?? '');
+            $visibleRows[] = array(
+                'ID' => $deviceId,
+                'TITLE' => $this->e((string)($row['TITLE'] ?: $row['ORIGINAL_TITLE'] ?: ('Устройство #' . $deviceId))),
+                'ORIGINAL_TITLE' => $this->e((string)($row['ORIGINAL_TITLE'] ?? '')),
+                'SKILL_NAME' => $this->e($this->skillLabel($skillId, (string)($row['SKILL_NAME'] ?? ''))),
+                'SKILL_ID' => $this->e($skillId),
+                'DEVICE_TYPE' => $this->e($deviceType),
+                'TYPE_TITLE' => $this->e(YaDevicesCatalog::deviceTypeTitle($deviceType)),
+                'ICON_TI' => YaDevicesCatalog::deviceIcon($deviceType),
+                'ICON_URL' => $this->e(YaDevicesCatalog::deviceIconUrl($deviceType, $isOn === 1)),
+                'ROOM' => $this->e((string)($row['ROOM'] ?? '')),
+                'HOUSE' => $this->e((string)($row['HOUSE'] ?? '')),
+                'IOT_ID' => $this->e((string)($row['IOT_ID'] ?? '')),
+                'UPDATED' => $this->e((string)($row['UPDATED'] ?? '')),
+                'VALUE' => $isOn,
+                'CAN_TOGGLE' => !empty($toggleByDevice[$deviceId]) ? 1 : 0,
+                'STATE_TEXT' => $this->e((string)($stateByDevice[$deviceId] ?? '')),
+                'CAPS_COUNT' => count($deviceCaps),
+                'LINKED_COUNT' => $linked,
+                'HAS_LINKS' => $linked > 0 ? 1 : 0,
+                'IS_STATION' => stripos($deviceType, 'devices.types.smart_speaker') !== false ? 1 : 0,
+                'SEARCH' => $this->e(mb_strtolower(
+                    implode(' ', array(
+                        (string)($row['TITLE'] ?? ''),
+                        (string)($row['ORIGINAL_TITLE'] ?? ''),
+                        $deviceType,
+                        (string)($row['ROOM'] ?? ''),
+                        (string)($row['HOUSE'] ?? ''),
+                        (string)($row['SKILL_NAME'] ?? ''),
+                        (string)($row['IOT_ID'] ?? ''),
+                    )),
+                    'UTF-8'
+                )),
+                'EDIT_URL' => '?view_mode=edit_yadevices&id=' . $deviceId,
+            );
+        }
+
+        $skills = array();
+        foreach ($skillsMap as $key => $skill) {
+            $skills[] = array(
+                'ID' => $this->e($key),
+                'TITLE' => $this->e($skill['TITLE']),
+                'COUNT' => (int)$skill['COUNT'],
+                'CHECKED' => in_array($key, $hidden, true) ? 0 : 1,
+            );
+        }
+        usort($skills, static function (array $left, array $right): int {
+            return strcasecmp($left['TITLE'], $right['TITLE']);
+        });
+
+        $out['RESULT'] = $visibleRows;
+        $out['DEVICES_TOTAL'] = count($visibleRows);
+        $out['DEVICES_ALL'] = count($rows);
+        $out['DEVICES_ON'] = $onCount;
+        $out['DEVICES_LINKED'] = $linkedDevices;
+        $out['SKILLS'] = $skills;
+        $out['SKILLS_TOTAL'] = count($skills);
+        $out['HIDDEN_SKILL_COUNT'] = count($hidden);
+        $out['HINT'] = YaDevicesHints::devices();
+        $out['ACTIVE_TAB'] = 'devices';
+    }
+
+    /**
+     * @param string $skillId
+     * @param string $stored
+     * @return string
+     */
+    private function skillLabel(string $skillId, string $stored = ''): string
+    {
+        if ($stored !== '') {
+            return $stored;
+        }
+        if ($skillId === 'local') {
+            return 'Яндекс Станция';
+        }
+        if ($skillId === '') {
+            return 'Без навыка';
+        }
+
+        return $skillId;
     }
 
     function getSkillName($skill_id)
@@ -1153,24 +1475,640 @@ class yadevices extends module
         return $cache[$skill_id];
     }
 
-    function search_scenarios(&$out)
+    /**
+     * Cloud scenarios list.
+     *
+     * @param array<string,mixed> $out
+     * @return void
+     */
+    private function searchScenarios(array &$out): void
     {
-        require(DIR_MODULES . $this->name . '/yascenarios_search.inc.php');
+        $scenarioId = isset($this->id) ? trim((string)$this->id) : '';
+        if ($this->mode === 'runScenario' && $scenarioId !== '') {
+            $this->runScenario($scenarioId);
+            $this->redirect('?view_mode=search_scenarios&scenario=run');
+        }
+        if ($this->mode === 'delScenario' && $scenarioId !== '') {
+            $this->delScenario($scenarioId);
+            $this->redirect('?view_mode=search_scenarios&scenario=deleted');
+        }
+
+        $out['RESULT'] = array();
+        $out['RESULT_TIMER'] = array();
+        $out['SCENARIO_ERROR'] = '';
+        $out['SCENARIOS_TOTAL'] = 0;
+        $out['SCENARIOS_ACTIVE'] = 0;
+        $out['SCENARIOS_CLOUD'] = 0;
+        $out['HINT'] = YaDevicesHints::scenarios();
+        $out['ACTIVE_TAB'] = 'scenarios';
+
+        if (empty($this->config['AUTHORIZED'])) {
+            $out['SCENARIO_ERROR'] = 'auth';
+            return;
+        }
+
+        $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
+        if (!is_array($data)) {
+            $out['SCENARIO_ERROR'] = 'api';
+            return;
+        }
+
+        $scenarios = isset($data['scenarios']) && is_array($data['scenarios']) ? $data['scenarios'] : array();
+        $result = array();
+        foreach ($scenarios as $scenario) {
+            $name = (string)($scenario['name'] ?? '');
+            $isCloud = strpos($name, 'мжд ') !== false;
+            $isActive = !empty($scenario['is_active']);
+            $devices = isset($scenario['devices']) && is_array($scenario['devices']) ? $scenario['devices'] : array();
+            $result[] = array(
+                'ID' => $this->e((string)($scenario['id'] ?? '')),
+                'NAME' => $this->e($name),
+                'IS_ACTIVE' => $isActive ? 'Активен' : 'Отключён',
+                'ACTIVE_TONE' => $isActive ? 'success' : 'neutral',
+                'CLOUDSCENARIO' => $isCloud ? 1 : 0,
+                'ICON_TI' => $isCloud ? 'cloud' : 'wand',
+                'ALLOWDEVICES' => $this->e(implode(', ', array_map('strval', $devices))),
+                'DEVICES_COUNT' => count($devices),
+            );
+            if ($isActive) {
+                $out['SCENARIOS_ACTIVE']++;
+            }
+            if ($isCloud) {
+                $out['SCENARIOS_CLOUD']++;
+            }
+        }
+
+        $timers = array();
+        if (isset($data['onetime_scenarios']) && is_array($data['onetime_scenarios'])) {
+            foreach ($data['onetime_scenarios'] as $scenario) {
+                $timers[] = array(
+                    'NAME' => $this->e((string)($scenario['name'] ?? '')),
+                    'SCHEDULED_TIME_HUMAN' => !empty($scenario['current_timer_value'])
+                        ? date('d.m.Y H:i', time() + (int)$scenario['current_timer_value'])
+                        : '—',
+                );
+            }
+        }
+
+        $out['RESULT'] = $result;
+        $out['RESULT_TIMER'] = $timers;
+        $out['SCENARIOS_TOTAL'] = count($result);
+        $out['HINT'] = YaDevicesHints::scenarios();
     }
 
     /**
-     * yastations edit/add
+     * Legacy public entry point.
      *
-     * @access public
+     * @param array<string,mixed> $out
+     * @param int|string $id
+     * @return void
      */
-    function edit_yastations(&$out, $id)
+    public function edit_yastations(&$out, $id)
     {
-        require(DIR_MODULES . $this->name . '/yastations_edit.inc.php');
+        $this->editYastations($out, (int)$id);
     }
 
-    function edit_yadevices(&$out, $id)
+    /**
+     * Station card.
+     *
+     * @param array<string,mixed> $out
+     * @param int $id
+     * @return void
+     */
+    private function editYastations(array &$out, int $id): void
     {
-        require(DIR_MODULES . $this->name . '/yadevices_edit.inc.php');
+        $station = $this->repository->station($id);
+        if ($station === null) {
+            $out['NOT_FOUND'] = 1;
+            $out['HINT'] = YaDevicesHints::main(false, false);
+            return;
+        }
+
+        $authorized = !empty($this->config['AUTHORIZED']);
+        $old = $station;
+
+        if ($this->mode === 'update_links') {
+            $station['ALARM_LINKED_OBJECT'] = trim((string)gr('alarm_linked_object'));
+            $station['ALARM_LINKED_PROPERTY'] = trim((string)gr('alarm_linked_property'));
+            $station['ASK_QUESTION_LINKED_OBJECT'] = trim((string)gr('ask_question_linked_object'));
+            $station['ASK_QUESTION_LINKED_PROPERTY'] = trim((string)gr('ask_question_linked_property'));
+            $station['ASK_ANSWER_LINKED_OBJECT'] = trim((string)gr('ask_answer_linked_object'));
+            $station['ASK_ANSWER_LINKED_PROPERTY'] = trim((string)gr('ask_answer_linked_property'));
+
+            $this->syncStationLinkedProperty($old['ALARM_LINKED_OBJECT'] ?? '', $old['ALARM_LINKED_PROPERTY'] ?? '', $station['ALARM_LINKED_OBJECT'], $station['ALARM_LINKED_PROPERTY']);
+            $this->syncStationLinkedProperty($old['ASK_QUESTION_LINKED_OBJECT'] ?? '', $old['ASK_QUESTION_LINKED_PROPERTY'] ?? '', $station['ASK_QUESTION_LINKED_OBJECT'], $station['ASK_QUESTION_LINKED_PROPERTY']);
+            $this->syncStationLinkedProperty($old['ASK_ANSWER_LINKED_OBJECT'] ?? '', $old['ASK_ANSWER_LINKED_PROPERTY'] ?? '', $station['ASK_ANSWER_LINKED_OBJECT'], $station['ASK_ANSWER_LINKED_PROPERTY']);
+
+            $this->repository->saveStation($station);
+            if ($station['ALARM_LINKED_OBJECT'] !== '' && $station['ALARM_LINKED_PROPERTY'] !== '') {
+                $currentAlarmValue = gg($station['ALARM_LINKED_OBJECT'] . '.' . $station['ALARM_LINKED_PROPERTY']);
+                if (trim((string)$currentAlarmValue) !== '') {
+                    $this->handleStationAlarmProperty($station, $currentAlarmValue);
+                }
+            }
+            $out['OK_MSG'] = 'Привязки обновлены.';
+        }
+
+        if ($this->mode === 'update_station_settings') {
+            $settings = array(
+                'dnd' => gr('dnd', 'int'),
+                'beta' => gr('beta', 'int'),
+                'locale' => gr('locale'),
+                'led_brightness' => gr('led_brightness'),
+                'visualization' => gr('visualization'),
+            );
+            if ($this->updateStationQuasarSettings($station, $settings)) {
+                $out['OK_MSG'] = 'Настройки станции обновлены.';
+            } else {
+                $out['ERR_MSG'] = 'Не удалось обновить настройки станции. Возможно, устройство не поддерживает часть параметров.';
+            }
+        }
+
+        if ($this->mode === 'create_alarm') {
+            if ($this->createStationAlarm($station, gr('alarm_date'), gr('alarm_time'))) {
+                $out['OK_MSG'] = 'Будильник создан.';
+            } else {
+                $out['ERR_MSG'] = 'Не удалось создать будильник.';
+            }
+        }
+
+        if ($this->mode === 'cancel_alarm') {
+            $alarmId = (string)gr('alarm_id');
+            if ($this->cancelStationAlarm($station, $alarmId)) {
+                if ((string)($station['ALARM_LINKED_ID'] ?? '') === $alarmId) {
+                    $station['ALARM_LINKED_ID'] = '';
+                    $station['ALARM_LINKED_VALUE'] = '';
+                    $this->repository->saveStation($station);
+                }
+                $out['OK_MSG'] = 'Будильник удалён.';
+            } else {
+                $out['ERR_MSG'] = 'Не удалось удалить будильник.';
+            }
+        }
+
+        if ($this->mode === 'detect_ip') {
+            $detectedIp = $this->detectStationIp($station);
+            if ($detectedIp) {
+                $station['IP'] = $detectedIp;
+                $this->repository->saveStation($station);
+                setGlobal('cycle_yadevicesControl', 'restart');
+                $out['OK_MSG'] = 'IP обновлён: ' . htmlspecialchars($detectedIp);
+            } else {
+                $out['ERR_MSG'] = 'Не удалось определить IP автоматически. Укажите IP вручную.';
+            }
+        }
+
+        if ($this->mode === 'test_local') {
+            if ($this->testLocalGlagolPort((string)($station['IP'] ?? ''))) {
+                $out['OK_MSG'] = 'Локальный порт 1961 доступен.';
+            } else {
+                $out['ERR_MSG'] = 'Локальный порт 1961 недоступен. Проверьте IP, сеть и поддержку локального режима.';
+            }
+        }
+
+        if ($this->mode === 'update') {
+            $newTitle = trim((string)gr('title'));
+            if ($newTitle !== '') {
+                $originalTitle = ($station['ORIGINAL_TITLE'] ?? '') ?: $station['TITLE'];
+                $station['TITLE'] = $newTitle;
+                $station['CUSTOM_TITLE'] = $newTitle !== $originalTitle ? 1 : 0;
+            }
+            $station['IP'] = trim((string)gr('ip'));
+            $station['TTS'] = (int)gr('tts', 'int');
+            $station['MIN_LEVEL_TEXT'] = trim((string)gr('min_level_text'));
+            $station['ALLOW_ASK'] = (int)gr('allow_ask', 'int');
+            $this->repository->saveStation($station);
+            if ($station['IP'] !== '') {
+                setGlobal('cycle_yadevicesControl', 'restart');
+            }
+            $out['OK_MSG'] = 'Станция сохранена.';
+        }
+
+        if ($this->mode === 'send_text') {
+            $text = trim((string)gr('text'));
+            $cloud = (int)gr('cloud');
+            $sendAs = (string)gr('sendas');
+            if ($text === '') {
+                $out['ERR_MSG'] = 'Введите текст или команду.';
+            } elseif ($cloud === 1) {
+                if (!$authorized) {
+                    $out['ERR_MSG'] = 'Для облачной отправки нужна авторизация Яндекса.';
+                } else {
+                    $command = $sendAs === '1' ? 'text_action' : 'phrase_action';
+                    $ok = $this->sendCommandToStationCloud($station, $command, $text);
+                    $ok ? $out['OK_MSG'] = 'Команда отправлена в облако.' : $out['ERR_MSG'] = 'Не удалось отправить команду в облако.';
+                }
+            } else {
+                $command = $sendAs === '2' ? 'dialog' : ($sendAs === '1' ? 'command' : 'text');
+                $ok = $this->sendCommandToStation($station, $command, $text);
+                $ok ? $out['OK_MSG'] = 'Команда отправлена на станцию.' : $out['ERR_MSG'] = 'Не удалось отправить команду. Проверьте IP, токен и цикл.';
+            }
+            $out['TEXT'] = $this->e($text);
+            $out['SENDAS'] = $this->e($sendAs);
+        }
+
+        if ($this->mode === 'ask_alice') {
+            $askText = trim((string)gr('ask_text'));
+            $out['ASK_TEXT'] = $this->e($askText);
+            $answer = $this->askStation($station, $askText);
+            if (is_array($answer)) {
+                $answerText = $answer['text'] ?? json_encode($answer, JSON_UNESCAPED_UNICODE);
+                $this->setLinkedStationAnswer($station, $answerText);
+                $out['ASK_ANSWER'] = $this->e((string)$answerText);
+                $out['OK_MSG'] = 'Ответ получен от локальной Алисы.';
+            } else {
+                $out['ERR_MSG'] = 'Не удалось получить ответ. Диалог работает только через локальный Glagol.';
+            }
+        }
+
+        $station = $this->repository->station($id) ?: $station;
+        $localCapable = YaDevicesCatalog::isLocalPlatform((string)($station['PLATFORM'] ?? ''));
+        $localAvailable = $localCapable
+            && trim((string)($station['IP'] ?? '')) !== ''
+            && trim((string)($station['DEVICE_TOKEN'] ?? '')) !== '';
+
+        $out['ID'] = (int)$station['ID'];
+        $out['TITLE'] = $this->e((string)($station['TITLE'] ?: $station['ORIGINAL_TITLE'] ?: ('Станция #' . $id)));
+        $out['ORIGINAL_TITLE'] = $this->e((string)($station['ORIGINAL_TITLE'] ?? ''));
+        $out['PLATFORM'] = $this->e((string)($station['PLATFORM'] ?? ''));
+        $out['PLATFORM_TITLE'] = $this->e(YaDevicesCatalog::platformTitle((string)($station['PLATFORM'] ?? '')));
+        $out['ICON_TI'] = YaDevicesCatalog::deviceIcon('devices.types.smart_speaker.' . (string)($station['PLATFORM'] ?? ''));
+        $out['ICON_URL'] = $this->e(YaDevicesCatalog::deviceIconUrl('devices.types.smart_speaker.' . (string)($station['PLATFORM'] ?? '')));
+        $out['STATION_ID'] = $this->e((string)($station['STATION_ID'] ?? ''));
+        $out['IOT_ID'] = $this->e((string)($station['IOT_ID'] ?? ''));
+        $out['IP'] = $this->e((string)($station['IP'] ?? ''));
+        $out['DEVICE_TOKEN'] = $this->e((string)($station['DEVICE_TOKEN'] ?? ''));
+        $out['TTS'] = (int)($station['TTS'] ?? 0);
+        $out['TTS_MODES'] = $this->ttsModeOptions((int)($station['TTS'] ?? 0), $localCapable, $localAvailable, $authorized);
+        $out['MIN_LEVEL_TEXT'] = $this->e((string)($station['MIN_LEVEL_TEXT'] ?? ''));
+        $out['ALLOW_ASK'] = (int)($station['ALLOW_ASK'] ?? 0);
+        $out['LOCAL_CAPABLE'] = $localCapable ? 1 : 0;
+        $out['LOCAL_AVAILABLE'] = $localAvailable ? 1 : 0;
+        $out['LOCAL_READY'] = $localAvailable ? 1 : 0;
+        $out['CLOUD_AVAILABLE'] = $authorized && trim((string)($station['IOT_ID'] ?? '')) !== '' ? 1 : 0;
+        $out['CLOUD_READY'] = $out['CLOUD_AVAILABLE'];
+        $out['CLOUD_SCENARIO_READY'] = trim((string)($station['TTS_SCENARIO'] ?? '')) !== '' ? 1 : 0;
+        $out['IP_TEST_AVAILABLE'] = trim((string)($station['IP'] ?? '')) !== '' ? 1 : 0;
+        $out['ALARM_LINKED_OBJECT'] = $this->e((string)($station['ALARM_LINKED_OBJECT'] ?? ''));
+        $out['ALARM_LINKED_PROPERTY'] = $this->e((string)($station['ALARM_LINKED_PROPERTY'] ?? ''));
+        $out['ALARM_LINKED_ID'] = $this->e((string)($station['ALARM_LINKED_ID'] ?? ''));
+        $out['ALARM_LINKED_VALUE'] = $this->e((string)($station['ALARM_LINKED_VALUE'] ?? ''));
+        $out['ASK_QUESTION_LINKED_OBJECT'] = $this->e((string)($station['ASK_QUESTION_LINKED_OBJECT'] ?? ''));
+        $out['ASK_QUESTION_LINKED_PROPERTY'] = $this->e((string)($station['ASK_QUESTION_LINKED_PROPERTY'] ?? ''));
+        $out['ASK_ANSWER_LINKED_OBJECT'] = $this->e((string)($station['ASK_ANSWER_LINKED_OBJECT'] ?? ''));
+        $out['ASK_ANSWER_LINKED_PROPERTY'] = $this->e((string)($station['ASK_ANSWER_LINKED_PROPERTY'] ?? ''));
+        $out['UPDATED'] = $this->e((string)($station['UPDATED'] ?? ''));
+        $out['HINT'] = YaDevicesHints::station($station, $authorized);
+        $out['ACTIVE_TAB'] = 'stations';
+        $out['PLAYER_URL'] = ROOTHTML . 'module/yadevices.html?station=' . $id;
+        $out['API_URL'] = ROOTHTML . 'api/module/yadevices';
+
+        $out['STATION_CONFIG_UNAVAILABLE'] = 1;
+        $out['STATION_DND'] = 0;
+        $out['STATION_DND_SUPPORTED'] = 0;
+        $out['STATION_BETA'] = 0;
+        $out['STATION_LOCALE'] = 'ru-RU';
+        $out['STATION_LED_BRIGHTNESS'] = '';
+        $out['STATION_VISUALIZATION'] = 'clock';
+        if ($authorized) {
+            $stationConfig = $this->getStationQuasarConfig($station);
+            if (is_array($stationConfig) && isset($stationConfig['config']) && is_array($stationConfig['config'])) {
+                $config = $stationConfig['config'];
+                $out['STATION_CONFIG_UNAVAILABLE'] = 0;
+                $out['STATION_DND'] = !empty($config['dndMode']['enabled']) ? 1 : 0;
+                $out['STATION_DND_SUPPORTED'] = isset($config['dndMode']) ? 1 : 0;
+                $out['STATION_BETA'] = !empty($config['beta']) ? 1 : 0;
+                $out['STATION_LOCALE'] = $this->e((string)($config['locale'] ?? 'ru-RU'));
+                $out['STATION_LED_BRIGHTNESS'] = $this->e((string)($config['led']['brightness']['value'] ?? ''));
+                $out['STATION_VISUALIZATION'] = !empty($config['led']['music_equalizer_visualization']['auto']) ? 'auto' : 'clock';
+            }
+        }
+        $out['LOCALE_OPTIONS'] = $this->localeOptions((string)$out['STATION_LOCALE']);
+
+        $alarms = array();
+        if ($authorized) {
+            $rawAlarms = $this->getStationAlarms($station);
+            if (is_array($rawAlarms)) {
+                foreach ($rawAlarms as $alarm) {
+                    $alarms[] = array(
+                        'ALARM_ID' => $this->e((string)($alarm['alarm_id'] ?? '')),
+                        'DATE' => $this->e((string)($alarm['date'] ?? '')),
+                        'TIME' => $this->e((string)($alarm['time'] ?? '')),
+                        'ENABLED' => !empty($alarm['enabled']) ? 'Да' : 'Нет',
+                        'RECURRING' => $this->e(!empty($alarm['recurring']['days_of_week']) ? implode(', ', $alarm['recurring']['days_of_week']) : ''),
+                    );
+                }
+            }
+        }
+        $out['ALARMS'] = $alarms;
+        $out['TODAY'] = date('Y-m-d');
+        $out['TEXT'] = $out['TEXT'] ?? '';
+        $out['SENDAS'] = $out['SENDAS'] ?? '0';
+        $out['ASK_TEXT'] = $out['ASK_TEXT'] ?? '';
+        $out['ASK_ANSWER'] = $out['ASK_ANSWER'] ?? '';
+    }
+
+    /**
+     * @param int $selected
+     * @param bool $localCapable
+     * @param bool $localAvailable
+     * @param bool $cloudAvailable
+     * @return array<int,array<string,mixed>>
+     */
+    private function ttsModeOptions(int $selected, bool $localCapable, bool $localAvailable, bool $cloudAvailable): array
+    {
+        $result = array();
+        foreach (YaDevicesCatalog::ttsModes() as $mode) {
+            $value = (int)$mode['value'];
+            $disabled = false;
+            $description = $mode['description'];
+            if ($value === 1 && (!$localCapable || !$localAvailable)) {
+                $disabled = true;
+                $description = !$localCapable ? 'Платформа не поддерживает локальный режим.' : 'Сначала укажите IP и сформируйте токен.';
+            }
+            if ($value === 2 && !$cloudAvailable) {
+                $disabled = true;
+                $description = 'Нужна авторизация Яндекса.';
+            }
+            $result[] = array(
+                'VALUE' => (string)$value,
+                'LABEL' => $this->e($mode['label']),
+                'DESCRIPTION' => $this->e($description),
+                'CHECKED' => $selected === $value ? 1 : 0,
+                'DISABLED' => $disabled ? 1 : 0,
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string $selected
+     * @return array<int,array<string,mixed>>
+     */
+    private function localeOptions(string $selected): array
+    {
+        $result = array();
+        foreach (YaDevicesCatalog::locales() as $value => $label) {
+            $result[] = array(
+                'VALUE' => $this->e($value),
+                'LABEL' => $this->e($label),
+                'SELECTED' => $selected === $value ? 1 : 0,
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Legacy public entry point.
+     *
+     * @param array<string,mixed> $out
+     * @param int|string $id
+     * @return void
+     */
+    public function edit_yadevices(&$out, $id)
+    {
+        $this->editYadevices($out, (int)$id);
+    }
+
+    /**
+     * Device card.
+     *
+     * @param array<string,mixed> $out
+     * @param int $id
+     * @return void
+     */
+    private function editYadevices(array &$out, int $id): void
+    {
+        $device = $this->repository->device($id);
+        if ($device === null) {
+            $out['NOT_FOUND'] = 1;
+            $out['HINT'] = YaDevicesHints::devices();
+            return;
+        }
+
+        $authorized = !empty($this->config['AUTHORIZED']);
+
+        if ($this->mode === 'switch') {
+            $current = (int)gr('value');
+            $value = $current === 1 ? 0 : 1;
+            $this->sendValueToYandex((string)$device['IOT_ID'], 'devices.capabilities.on_off', $value);
+            usleep(500000);
+            $this->redirect('?view_mode=edit_yadevices&id=' . $id);
+        }
+
+        if ($this->mode === 'rename') {
+            $newTitle = trim((string)gr('title'));
+            if ($newTitle !== '') {
+                $originalTitle = ($device['ORIGINAL_TITLE'] ?? '') ?: $device['TITLE'];
+                $device['TITLE'] = $newTitle;
+                $device['CUSTOM_TITLE'] = $newTitle !== $originalTitle ? 1 : 0;
+                $this->repository->saveDevice($device);
+                if (!empty($device['yastationID'])) {
+                    $station = $this->repository->station((int)$device['yastationID']);
+                    if ($station !== null) {
+                        $stationOriginalTitle = ($station['ORIGINAL_TITLE'] ?? '') ?: $station['TITLE'];
+                        $station['TITLE'] = $newTitle;
+                        $station['CUSTOM_TITLE'] = $newTitle !== $stationOriginalTitle ? 1 : 0;
+                        $this->repository->saveStation($station);
+                    }
+                }
+                $out['OK_MSG'] = 'Название сохранено.';
+                $device = $this->repository->device($id) ?: $device;
+            }
+        }
+
+        $capabilities = $this->repository->deviceCapabilities($id);
+        if ($this->mode === 'update') {
+            $postedObjects = isset($_POST['linked_object']) && is_array($_POST['linked_object']) ? $_POST['linked_object'] : array();
+            $postedProperties = isset($_POST['linked_property']) && is_array($_POST['linked_property']) ? $_POST['linked_property'] : array();
+            $postedMethods = isset($_POST['linked_method']) && is_array($_POST['linked_method']) ? $_POST['linked_method'] : array();
+            foreach ($capabilities as $index => $capability) {
+                $capId = (int)$capability['ID'];
+                $oldObject = (string)($capability['LINKED_OBJECT'] ?? '');
+                $oldProperty = (string)($capability['LINKED_PROPERTY'] ?? '');
+                $capability['LINKED_OBJECT'] = trim((string)($postedObjects[$capId] ?? ''));
+                $capability['LINKED_PROPERTY'] = trim((string)($postedProperties[$capId] ?? ''));
+                $capability['LINKED_METHOD'] = trim((string)($postedMethods[$capId] ?? ''));
+                if ($capability['LINKED_OBJECT'] !== '' && $capability['LINKED_PROPERTY'] === '' && $capability['LINKED_METHOD'] === '') {
+                    $capability['LINKED_OBJECT'] = '';
+                }
+                $this->repository->saveCapability($capability);
+                if ($oldObject !== '' && ($oldObject !== $capability['LINKED_OBJECT'] || $oldProperty !== $capability['LINKED_PROPERTY'])) {
+                    removeLinkedProperty($oldObject, $oldProperty, $this->name);
+                }
+                if ($capability['LINKED_OBJECT'] !== '' && $capability['LINKED_PROPERTY'] !== '') {
+                    addLinkedProperty($capability['LINKED_OBJECT'], $capability['LINKED_PROPERTY'], $this->name);
+                    $this->setProperty($capability, $capability['VALUE'], $capability, (string)$capability['TITLE']);
+                }
+                $capabilities[$index] = $capability;
+            }
+            $out['OK_MSG'] = 'Связи устройства сохранены.';
+        }
+
+        $linked = 0;
+        $deviceType = (string)($device['DEVICE_TYPE'] ?? '');
+        $onState = 0;
+        foreach ($capabilities as $index => $capability) {
+            $title = (string)($capability['TITLE'] ?? '');
+            $group = YaDevicesCatalog::capabilityGroup($title);
+            $isLinked = trim((string)($capability['LINKED_OBJECT'] ?? '')) !== ''
+                && trim((string)($capability['LINKED_PROPERTY'] ?? '')) !== '';
+            if ($isLinked) {
+                $linked++;
+            }
+            if ($title === 'devices.capabilities.on_off' && (int)($capability['VALUE'] ?? 0) === 1) {
+                $onState = 1;
+            }
+            $hide = false;
+            if (stripos($deviceType, 'devices.types.smart_speaker') !== false
+                && $group === 'local'
+                && trim((string)($device['IP'] ?? '')) === '') {
+                $hide = true;
+            }
+            $capabilities[$index]['TITLE_RAW'] = $this->e($title);
+            $capabilities[$index]['LABEL'] = $this->e(YaDevicesCatalog::capabilityTitle($title));
+            $capabilities[$index]['GROUP'] = $group;
+            $capabilities[$index]['VALUE'] = $this->e((string)($capability['VALUE'] ?? ''));
+            $capabilities[$index]['READONLY'] = (int)($capability['READONLY'] ?? 0);
+            $capabilities[$index]['ALLOWPARAMS'] = $this->e((string)($capability['ALLOWPARAMS'] ?? ''));
+            $capabilities[$index]['LINKED_OBJECT'] = $this->e((string)($capability['LINKED_OBJECT'] ?? ''));
+            $capabilities[$index]['LINKED_PROPERTY'] = $this->e((string)($capability['LINKED_PROPERTY'] ?? ''));
+            $capabilities[$index]['LINKED_METHOD'] = $this->e((string)($capability['LINKED_METHOD'] ?? ''));
+            $capabilities[$index]['UPDATED'] = $this->e((string)($capability['UPDATED'] ?? ''));
+            $capabilities[$index]['LINKED'] = $isLinked ? 1 : 0;
+            $capabilities[$index]['HIDE'] = $hide ? 1 : 0;
+            $capabilities[$index]['CAN_LINK'] = 1;
+        }
+
+        $device['ICON_TI'] = YaDevicesCatalog::deviceIcon($deviceType);
+        $device['ICON_URL'] = YaDevicesCatalog::deviceIconUrl($deviceType, $onState === 1);
+        $out['ID'] = $id;
+        $out['TITLE'] = $this->e((string)($device['TITLE'] ?: $device['ORIGINAL_TITLE'] ?: ('Устройство #' . $id)));
+        $out['ORIGINAL_TITLE'] = $this->e((string)($device['ORIGINAL_TITLE'] ?? ''));
+        $out['DEVICE_TYPE'] = $this->e($deviceType);
+        $out['TYPE_TITLE'] = $this->e(YaDevicesCatalog::deviceTypeTitle($deviceType));
+        $out['ICON_TI'] = $device['ICON_TI'];
+        $out['ICON_URL'] = $this->e($device['ICON_URL']);
+        $out['IOT_ID'] = $this->e((string)($device['IOT_ID'] ?? ''));
+        $out['STATION_ID'] = $this->e((string)($device['yastationID'] ?? ''));
+        $out['SKILL_ID'] = $this->e((string)($device['SKILL_ID'] ?? ''));
+        $out['SKILL_NAME'] = $this->e($this->skillLabel((string)($device['SKILL_ID'] ?? ''), (string)($device['SKILL_NAME'] ?? '')));
+        $out['ROOM'] = $this->e((string)($device['ROOM'] ?? ''));
+        $out['HOUSE'] = $this->e((string)($device['HOUSE'] ?? ''));
+        $out['UPDATED'] = $this->e((string)($device['UPDATED'] ?? ''));
+        $out['VALUE'] = $onState;
+        $out['PROPERTIES'] = $capabilities;
+        $out['PROPERTIES_COUNT'] = count($capabilities);
+        $out['LINKED_COUNT'] = $linked;
+        $out['HINT'] = YaDevicesHints::device(array('LINKED_COUNT' => $linked));
+        $out['ACTIVE_TAB'] = 'devices';
+        $out['IS_STATION'] = stripos($deviceType, 'devices.types.smart_speaker') !== false ? 1 : 0;
+        $out['AUTHORIZED'] = $authorized ? 1 : 0;
+    }
+
+    /**
+     * Settings page.
+     *
+     * @param array<string,mixed> $out
+     * @return void
+     */
+    private function settings(array &$out): void
+    {
+        $out['API_USERNAME'] = $this->e((string)$this->config['API_USERNAME']);
+        $out['RELOAD_TIME'] = (int)$this->config['RELOAD_TIME'];
+        $out['RELOAD_OPTIONS'] = $this->reloadOptions((int)$this->config['RELOAD_TIME']);
+        $out['ERRORMONITOR'] = !empty($this->config['ERRORMONITOR']) ? 1 : 0;
+        $out['ERRORMONITORTYPE'] = (int)$this->config['ERRORMONITORTYPE'];
+        $out['NOTIFY_GROUPS'] = $this->prepareNotifyGroupsForTemplate();
+        $out['NOTIFY_STATIONS'] = $this->prepareNotifyStationsForTemplate();
+        $out['NOTIFY_GROUPS_TEXT'] = $this->e($this->notifyGroupsToText());
+        $lastRun = (int)getGlobal('cycle_yadevicesRun');
+        $out['CYCLE_LAST_RUN'] = $lastRun > 0 ? date('d.m.Y H:i:s', $lastRun) : 'ещё не запускался';
+        $out['CYCLE_STATE'] = $lastRun > 0 && time() - $lastRun < 120 ? 'running' : 'idle';
+        $out['CYCLE_TONE'] = $out['CYCLE_STATE'] === 'running' ? 'success' : 'warning';
+        $out['CYCLE_ICON'] = $out['CYCLE_STATE'] === 'running' ? 'activity' : 'clock-pause';
+        $out['CYCLE_LABEL'] = $out['CYCLE_STATE'] === 'running' ? 'работает' : 'не запущен';
+        $out['STATIONS_TOTAL'] = $this->repository->count('yastations');
+        $out['DEVICES_TOTAL'] = $this->repository->count('yadevices');
+        $out['CAPABILITIES_TOTAL'] = $this->repository->count('yadevices_capabilities');
+        $out['HINT'] = YaDevicesHints::settings();
+        $out['ACTIVE_TAB'] = 'settings';
+        $out['API_URL'] = ROOTHTML . 'api/module/yadevices';
+    }
+
+    /**
+     * @param int $selected
+     * @return array<int,array<string,mixed>>
+     */
+    private function reloadOptions(int $selected): array
+    {
+        $result = array();
+        foreach (YaDevicesCatalog::reloadOptions() as $seconds) {
+            $result[] = array(
+                'VALUE' => (string)$seconds,
+                'LABEL' => $this->e(YaDevicesCatalog::reloadLabel($seconds)),
+                'SELECTED' => $selected === $seconds ? 1 : 0,
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * About page.
+     *
+     * @param array<string,mixed> $out
+     * @return void
+     */
+    private function about(array &$out): void
+    {
+        $out['MODULE_VERSION'] = $this->version;
+        $out['STATIONS_TOTAL'] = $this->repository->count('yastations');
+        $out['DEVICES_TOTAL'] = $this->repository->count('yadevices');
+        $out['CAPABILITIES_TOTAL'] = $this->repository->count('yadevices_capabilities');
+        $out['AUTHORIZED'] = !empty($this->config['AUTHORIZED']) ? 1 : 0;
+        $out['KB_README'] = ROOTHTML . 'panel/knowledge_base/module/yadevices/README.html';
+        $out['KB_SETUP'] = ROOTHTML . 'panel/knowledge_base/module/yadevices/setup.html';
+        $out['KB_API'] = ROOTHTML . 'panel/knowledge_base/module/yadevices/api.html';
+        $out['FORUM_URL'] = 'https://mjdm.ru/forum/viewtopic.php?f=5&t=7359';
+        $out['GITHUB_URL'] = 'https://github.com/SmoKE585/majordomo-yadevices';
+        $out['YANDEX_DOCS_URL'] = 'https://yandex.ru/dev/dialogs/alice/doc/ru/';
+        $out['ACTIVE_TAB'] = 'about';
+    }
+
+    /**
+     * Persist settings and restart the polling cycle.
+     *
+     * @return void
+     */
+    private function saveSettings(): void
+    {
+        $reload = (int)gr('cycleIsOnTime');
+        if (!in_array($reload, YaDevicesCatalog::reloadOptions(), true)) {
+            $reload = 10;
+        }
+        $errorMonitor = gr('errorMonitor');
+        $enabled = in_array((string)$errorMonitor, array('on', '1'), true);
+        $this->config['RELOAD_TIME'] = $reload;
+        $this->config['ERRORMONITOR'] = $enabled ? 1 : 0;
+        $this->config['ERRORMONITORTYPE'] = $enabled ? (int)gr('errorMonitorType', 'int') : 0;
+        $this->config['NOTIFY_GROUPS'] = $this->normalizeNotifyGroupsPost($_POST);
+        $this->saveConfig();
+        setGlobal('cycle_yadevicesControl', 'restart');
+        $this->redirect('?view_mode=settings&saved=1');
+    }
+
+    /**
+     * HTML-escape a value for templates.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    private function e($value): string
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
